@@ -74,7 +74,21 @@
         table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
         th { background: #f9f9f9; color: #555; font-weight: bold; }
-        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: white; font-weight: bold; display: inline-block; }
+        
+        /* Updated Tags for New Logic */
+        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: #333; font-weight: bold; display: inline-block; border: 1px solid transparent; }
+        
+        /* 粉紅色 - 甜蜜區 */
+        .tag-pink { background-color: #fce4ec; color: #c2185b; border-color: #f8bbd0; }
+        
+        /* 藍色 - 主動了解 */
+        .tag-blue { background-color: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
+        
+        /* 黃色 - 建立信任 */
+        .tag-yellow { background-color: #fff9c4; color: #fbc02d; border-color: #fff59d; }
+        
+        /* 綠色 - 有空再了解 */
+        .tag-green { background-color: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
         
         /* Loading Spinner */
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
@@ -285,8 +299,6 @@
             
             // 更新數據
             let targetId = `g${targetGridIdx}-c4`;
-            // 這裡我們不存入 DB，只做視覺同步，或者你也可以選擇存入 DB
-            // 為了簡單，我們只做視覺呈現
             let el = document.querySelector(`.editable-cell[data-id="${targetId}"]`);
             if(el) el.innerText = centerVal;
         }
@@ -351,7 +363,7 @@
         }
     }
 
-    // --- 5. CRM 邏輯 ---
+    // --- 5. CRM 邏輯 (Updated Colors) ---
     async function loadContacts() {
         const { data } = await db.from('user_contacts')
             .select('*')
@@ -363,19 +375,11 @@
         
         if(data) {
             data.forEach(c => {
-                // 顏色邏輯
-                let color = '#4caf50'; // 綠 (觀察)
-                if ((c.trust_level === 'A' || c.trust_level === 'B') && (c.need_level === 'X' || c.need_level === 'Y')) {
-                    color = '#f44336'; // 紅 (甜蜜區)
-                } else if (c.trust_level === 'C' && c.need_level === 'X') {
-                    color = '#2196f3'; // 藍 (建立信任)
-                } else if ((c.trust_level === 'A' || c.trust_level === 'B') && c.need_level === 'Z') {
-                    color = '#ff9800'; // 橘 (主動了解)
-                }
+                let strategy = getStrategy(c.trust_level, c.need_level);
 
                 list.innerHTML += `
                     <tr>
-                        <td><span class="tag" style="background:${color}">${c.trust_level}/${c.need_level}</span></td>
+                        <td><span class="tag ${strategy.class}">${strategy.text}</span></td>
                         <td>
                             <b>${c.name}</b> <br>
                             <small style="color:#666">${c.industry}</small>
@@ -387,6 +391,27 @@
                 `;
             });
         }
+    }
+
+    // 核心邏輯修正
+    function getStrategy(trust, need) {
+        // 1. 甜蜜區: (A or B) + (X or Y) -> 粉紅色
+        if ((trust === 'A' || trust === 'B') && (need === 'X' || need === 'Y')) {
+            return { text: '🔥 甜蜜區 (大膽邀約)', class: 'tag-pink' };
+        }
+        
+        // 2. 主動了解: (A or B) + Z -> 藍色
+        if ((trust === 'A' || trust === 'B') && (need === 'Z')) {
+            return { text: '🤝 主動了解需求', class: 'tag-blue' };
+        }
+        
+        // 3. 建立信任: (C or D) + X -> 黃色
+        if ((trust === 'C' || trust === 'D') && (need === 'X')) {
+            return { text: '✨ 建立信任', class: 'tag-yellow' };
+        }
+        
+        // 4. 有空再了解: (C or D) + (Y or Z) -> 綠色
+        return { text: '🌱 有空再了解', class: 'tag-green' };
     }
 
     async function addContact() {
@@ -411,7 +436,6 @@
             document.getElementById('cName').value = '';
             document.getElementById('cIndustry').value = '';
             await loadContacts();
-            // 新增人脈可能會觸發別人的配對，但這裡不需要重新整理自己的配對
         }
         document.getElementById('loading').style.display = 'none';
     }
