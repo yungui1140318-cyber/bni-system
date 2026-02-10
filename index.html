@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>雲貴人脈管理系統 (旗艦版)</title>
+    <title>雲貴人脈管理系統 (共用清單版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -44,7 +44,6 @@
         .admin-panel { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        
         .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); background: white; }
         .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
@@ -61,11 +60,17 @@
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
         .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
-        .editable-cell { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 0.85rem; outline: none; padding: 2px; word-break: break-all; cursor: text; }
-        .editable-cell:focus { background: #fffde7; }
-        .core .editable-cell { background: #f5f5f5; font-weight: bold; color: #444; }
-        .master .editable-cell { background: var(--primary-color); color: white; font-weight: bold; font-size: 1rem; }
-        .master .editable-cell:empty::before { content: "核心\a產業"; white-space: pre; opacity: 0.7; }
+        
+        .grid-select {
+            width: 100%; height: 100%; border: none; outline: none; background: transparent;
+            text-align: center; text-align-last: center; 
+            font-size: 0.8rem; cursor: pointer; appearance: none; -webkit-appearance: none;
+            padding: 2px; white-space: pre-wrap; word-break: break-word;
+        }
+        .grid-select:focus { background: #fffde7; }
+        .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
+        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.9rem; }
+        .master .grid-select option { color: #333; }
 
         /* Match View Styles */
         .match-card { background: white; border-left: 5px solid #2196f3; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
@@ -141,15 +146,16 @@
     <div style="margin-bottom:15px; color:#666; font-size:0.9rem; padding:10px; background:#e3f2fd; border-radius:4px;">
         💡 系統會根據您 <b>81 宮格核心圈 (中間九格)</b> 的需求，自動搜尋全分會夥伴的人脈庫。
     </div>
-    <div id="match-results">
-        </div>
+    <div id="match-results"></div>
 </div>
 
 <div id="crm-view" class="container">
     <div class="crm-form">
         <div class="row">
             <input id="cName" placeholder="人脈姓名">
-            <input id="cIndustry" placeholder="產業類別">
+            <select id="cIndustry">
+                <option value="" disabled selected>載入中...</option>
+            </select>
         </div>
         <div class="row">
             <select id="cTrust">
@@ -220,6 +226,78 @@
     let gridData = {}; 
     let myContacts = [];
     let myNeeds = [];
+    let industriesList = []; // Shared options list
+
+    // --- Core: Load Industries from DB ---
+    async function loadIndustries() {
+        // Fetch from Supabase
+        let { data, error } = await db.from('industries').select('name').order('name');
+        
+        if (data) {
+            industriesList = data.map(i => i.name);
+        } else {
+            industriesList = ["載入失敗"]; // Fallback
+        }
+
+        // Update all select elements on the page (CRM + Grid)
+        updateAllSelects();
+    }
+
+    function updateAllSelects() {
+        // 1. Prepare HTML options
+        let opts = `<option value="">(空)</option>`;
+        industriesList.forEach(ind => {
+            opts += `<option value="${ind}">${ind}</option>`;
+        });
+        opts += `<option value="ADD_NEW" style="color:${getComputedStyle(document.documentElement).getPropertyValue('--primary-color')}; font-weight:bold;">➕ 新增產業...</option>`;
+
+        // 2. Update CRM form
+        const crmSelect = document.getElementById('cIndustry');
+        if(crmSelect) crmSelect.innerHTML = `<option value="" disabled selected>請選擇產業...</option>` + opts;
+
+        // 3. Update Grid Selects (if rendered)
+        document.querySelectorAll('.grid-select').forEach(sel => {
+            let currentVal = sel.value; // Keep selection
+            sel.innerHTML = opts;
+            sel.value = currentVal;
+            // Handle old data not in list
+            if(currentVal && !sel.value) {
+                let tempOpt = document.createElement('option');
+                tempOpt.value = currentVal;
+                tempOpt.innerText = currentVal + " (舊)";
+                tempOpt.selected = true;
+                sel.appendChild(tempOpt);
+            }
+        });
+    }
+
+    // --- Core: Handle New Industry Addition ---
+    async function handleNewIndustryChange(selectEl, callback) {
+        if(selectEl.value === 'ADD_NEW') {
+            const newName = prompt("請輸入新的產業名稱：");
+            if(newName && newName.trim() !== "") {
+                const finalName = newName.trim();
+                // 1. Optimistic update (for speed)
+                if(!industriesList.includes(finalName)) {
+                    industriesList.push(finalName);
+                    industriesList.sort();
+                    updateAllSelects();
+                }
+                
+                // 2. Set this select to the new value
+                selectEl.value = finalName;
+                if(callback) callback(finalName);
+
+                // 3. Save to DB
+                await db.from('industries').insert({ name: finalName });
+            } else {
+                selectEl.value = ""; // Cancelled
+            }
+        } else {
+            // Normal change
+            if(callback) callback(selectEl.value);
+        }
+    }
 
     // --- Login Logic ---
     async function login() {
@@ -246,9 +324,17 @@
             loadMembers();
         }
 
-        renderGridStructure();
-        await loadGrid();
-        await loadContacts();
+        // Init Sequence
+        await loadIndustries(); // Get options first
+        renderGridStructure();  // Draw grid
+        await loadGrid();       // Fill grid
+        await loadContacts();   // Fill CRM
+        
+        // Bind CRM select change event
+        document.getElementById('cIndustry').addEventListener('change', function() {
+            handleNewIndustryChange(this);
+        });
+
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -307,23 +393,35 @@
     function renderGridStructure() {
         const el = document.getElementById('mandala');
         if(el.innerHTML) return; 
+        
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
                 let cell = document.createElement('div'); 
                 let isM = (g===4 && c===4), isC = (c===4);
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
-                let div = document.createElement('div');
-                div.className = 'editable-cell';
-                div.contentEditable = true;
+                
+                // Create SELECT
+                let select = document.createElement('select');
+                select.className = 'grid-select';
                 let id = `g${g}-c${c}`;
-                div.dataset.id = id;
-                if(g!==4 && c===4) div.contentEditable = false; 
-                div.onblur = (e) => {
-                    let val = e.target.innerText;
-                    if(val !== (gridData[id] || '')) saveCell(id, val);
+                select.dataset.id = id;
+                
+                // Initial empty populate (will be filled by loadIndustries)
+                select.innerHTML = '<option value="">(讀取中)</option>';
+
+                if(g!==4 && c===4) {
+                    select.disabled = true; // Sync cells readonly
+                }
+
+                // Bind Change Event (Includes New Item Logic)
+                select.onchange = (e) => {
+                    handleNewIndustryChange(e.target, (finalVal) => {
+                        if(finalVal !== (gridData[id] || '')) saveCell(id, finalVal);
+                    });
                 };
-                cell.appendChild(div);
+                
+                cell.appendChild(select);
                 sub.appendChild(cell);
             }
             el.appendChild(sub);
@@ -335,8 +433,18 @@
         if (data) {
             data.forEach(item => {
                 gridData[item.grid_index] = item.content;
-                let el = document.querySelector(`.editable-cell[data-id="${item.grid_index}"]`);
-                if(el) el.innerText = item.content;
+                let el = document.querySelector(`.grid-select[data-id="${item.grid_index}"]`);
+                if(el) {
+                    el.value = item.content;
+                    // Handle legacy data not in list
+                    if(!el.value && item.content) {
+                        let opt = document.createElement('option');
+                        opt.value = item.content;
+                        opt.innerText = item.content + " (舊)";
+                        opt.selected = true;
+                        el.appendChild(opt);
+                    }
+                }
             });
         }
         syncGridVisuals();
@@ -354,37 +462,45 @@
             if(i === 4) continue; 
             let centerVal = gridData[`g4-c${i}`] || '';
             let targetId = `g${mapCenterToOuter[i]}-c4`;
-            let el = document.querySelector(`.editable-cell[data-id="${targetId}"]`);
-            if(el) el.innerText = centerVal;
+            let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
+            if(el) {
+                // Check if value exists in options, if not force it (for display)
+                el.value = centerVal;
+                if(!el.value && centerVal) {
+                     let opt = document.createElement('option');
+                     opt.value = centerVal;
+                     opt.innerText = centerVal;
+                     opt.selected = true;
+                     el.appendChild(opt);
+                }
+            }
         }
     }
 
-    // --- Match Logic (New Tab Function) ---
+    // --- Match Logic ---
     async function loadMatches() {
         const resDiv = document.getElementById('match-results');
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
 
-        // 1. Get needs from Center Grid
         myNeeds = [];
         for(let i=0; i<9; i++) {
             let val = gridData[`g4-c${i}`];
-            if(val && val.trim() !== '' && val !== '核心\n產業') myNeeds.push(val);
+            if(val && val.trim() !== '') myNeeds.push(val);
         }
 
         if(myNeeds.length === 0) {
-            resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」的中間九格填寫您的需求產業。</div>';
+            resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」的中間九格選擇您的需求產業。</div>';
             return;
         }
 
         let html = '';
         let foundAny = false;
 
-        // 2. Query DB
         for (let need of myNeeds) {
             const { data } = await db.from('user_contacts')
                 .select('*')
-                .neq('member_id', currentMember.id) // Not mine
-                .ilike('industry', `%${need}%`); // Fuzzy match
+                .neq('member_id', currentMember.id)
+                .eq('industry', need); // Exact match because of standard list
 
             if(data && data.length > 0) {
                 foundAny = true;
@@ -408,7 +524,7 @@
             }
         }
 
-        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">目前分會夥伴的人脈庫中，尚未找到符合您需求的資源。</div>';
+        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">目前分會夥伴的人脈庫中，尚未找到符合您需求的資源。<br>（請確認大家都已更新為標準產業名稱）</div>';
     }
 
     // --- CRM Logic & Logs ---
@@ -423,8 +539,6 @@
         list.innerHTML = '';
         myContacts.forEach((c, index) => {
             let strategy = getStrategy(c.trust_level, c.need_level);
-            
-            // Render Logs Summary
             let logCount = c.logs ? c.logs.length : 0;
             let logBtnText = logCount > 0 ? `📝 紀錄 (${logCount})` : `📝 紀錄`;
 
@@ -450,7 +564,8 @@
     async function addContact() {
         const name = document.getElementById('cName').value;
         const ind = document.getElementById('cIndustry').value;
-        if(!name || !ind) return alert("請填寫資訊");
+        if(!name || !ind || ind === 'ADD_NEW') return alert("請填寫資訊並選擇產業");
+        
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').insert({
             member_id: currentMember.id, owner_name: currentMember.name, name: name, industry: ind,
@@ -480,8 +595,6 @@
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         
-        // Show existing logs in textarea placeholder or a separate list?
-        // Let's make it a simple list inside the modal for viewing/editing
         let contact = myContacts[cIdx];
         let contentHtml = '';
         
@@ -495,12 +608,9 @@
                          <div class="log-content">${l.content}</div>
                     </div>`;
             });
-            // Append a divider
             contentHtml += `<hr style="margin:15px 0; border:0; border-top:1px solid #eee;">`;
         }
         
-        // We use the modal primarily to ADD new logs, but show history above
-        // Hack: Insert history into modal container temporarily
         let modalBody = document.querySelector('.modal');
         let historyDiv = document.getElementById('logHistory');
         if(!historyDiv) {
@@ -515,7 +625,7 @@
 
         document.getElementById('modalTitle').innerText = `面談紀錄：${contact.name}`;
         document.getElementById('logDate').value = now.toISOString().slice(0, 16);
-        document.getElementById('logContent').value = ''; // Always empty for new log
+        document.getElementById('logContent').value = ''; 
         
         document.getElementById('logModal').style.display = 'flex';
     }
@@ -534,7 +644,6 @@
         let contact = myContacts[editingContactIdx];
         let logs = contact.logs || [];
 
-        // Always add new log to top
         logs.unshift({ date: dateVal, content: content });
 
         document.getElementById('loading').style.display = 'block';
@@ -543,7 +652,7 @@
         if(error) alert("儲存失敗");
         else {
             closeLogModal();
-            loadContacts(); // Refresh list to update counts
+            loadContacts();
         }
         document.getElementById('loading').style.display = 'none';
     }
@@ -556,7 +665,6 @@
         
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
         if(!error) {
-            // Refresh modal view
             openLogModal(cIdx, -1);
             loadContacts();
         }
@@ -573,7 +681,7 @@
         } else if(t==='matches') {
             document.getElementById('matches-view').classList.add('active');
             document.querySelectorAll('.tab-btn')[1].classList.add('active');
-            loadMatches(); // Load data when tab clicked
+            loadMatches();
         } else if(t==='crm') {
             document.getElementById('crm-view').classList.add('active');
             document.querySelectorAll('.tab-btn')[2].classList.add('active');
