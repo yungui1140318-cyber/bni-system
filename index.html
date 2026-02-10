@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雲貴人脈管理系統 (直連版)</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg-color); height: 100vh; display: flex; flex-direction: column; color: var(--text-color); }
+
+        /* --- Identity Overlay (登入層) --- */
+        #identity-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--primary-color); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s;
+        }
+        .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .box h2 { margin-top: 0; color: #333; }
+        .box p { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+        .box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1.1rem; box-sizing: border-box; outline: none; }
+        .box input:focus { border-color: var(--primary-color); }
+        .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .box button:active { transform: scale(0.98); }
+        
+        /* --- Header & Tabs --- */
+        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; }
+        .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; }
+
+        .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
+        .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 600px; margin: 0 auto; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; transition: 0.3s; }
+        .tab-btn.active { background: var(--primary-color); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        /* --- Main Content Area --- */
+        .container { padding: 15px; max-width: 800px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; }
+        .container.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 81 Grid Styles --- */
+        .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
+        .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
+        /* Center Grid Highlight */
+        .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
+        
+        .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
+        
+        .editable-cell {
+            width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+            text-align: center; font-size: 0.85rem; outline: none; padding: 2px;
+            word-break: break-all; cursor: text;
+        }
+        .editable-cell:focus { background: #fffde7; }
+        
+        .core .editable-cell { background: #f5f5f5; font-weight: bold; color: #444; }
+        .master .editable-cell { background: var(--primary-color); color: white; font-weight: bold; font-size: 1rem; }
+        .master .editable-cell:empty::before { content: "核心\a產業"; white-space: pre; opacity: 0.7; }
+        .master .editable-cell:focus { background: #fff; color: #000; }
+
+        /* --- Radar (Matches) --- */
+        .radar { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #90caf9; }
+        .match-item { background: white; padding: 10px; margin-bottom: 8px; border-radius: 6px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .match-tag { background: #1565c0; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-right: 5px; }
+
+        /* --- CRM Styles --- */
+        .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
+        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
+        .btn-main:hover { background: #b02323; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; color: #555; font-weight: bold; }
+        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: white; font-weight: bold; display: inline-block; }
+        
+        /* Loading Spinner */
+        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 10000; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        @media (max-width: 768px) {
+            .mandala { gap: 10px; }
+            .sub-grid { min-height: 250px; } /* Mobile height fix */
+            .editable-cell { font-size: 1rem; } /* Larger text on mobile */
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    // 🟢 你的資料庫設定
+    const SUPABASE_URL = 'https://htlywcaudjfnneaoikgz.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHl3Y2F1ZGpmbm5lYW9pa2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MjExOTIsImV4cCI6MjA4NjI5NzE5Mn0.h5lO8qbOBaQD1vqNwyFmLAGjut6afZN4mDrgmPoxCUg';
+</script>
+
+<div id="loading">資料同步中...</div>
+
+<div id="identity-overlay">
+    <div class="box">
+        <h2>雲貴人脈系統</h2>
+        <p>請輸入您的真實姓名以同步資料</p>
+        <input type="text" id="userName" placeholder="例如：吳志璘" onkeypress="if(event.key==='Enter') initSystem()">
+        <button onclick="initSystem()">開始使用</button>
+    </div>
+</div>
+
+<header>
+    <h1>雲貴人脈庫</h1>
+    <span class="user-tag" id="displayUser">訪客</span>
+</header>
+
+<div class="tabs-container">
+    <div class="tabs">
+        <div class="tab-btn active" onclick="switchTab('grid')">產業鏈 81 宮格</div>
+        <div class="tab-btn" onclick="switchTab('crm')">人脈變現表</div>
+    </div>
+</div>
+
+<div id="grid-view" class="container active">
+    <div class="mandala" id="mandala"></div>
+    <div class="radar" id="radar" style="display:none;">
+        <h3 style="margin:0 0 10px 0; color:#1565c0; font-size:1rem;">📡 人脈資源雷達 (自動搜尋全會)</h3>
+        <div id="radar-content"></div>
+    </div>
+</div>
+
+<div id="crm-view" class="container">
+    <div class="crm-form">
+        <div class="row">
+            <input id="cName" placeholder="人脈姓名 (例如: 王小明)">
+            <input id="cIndustry" placeholder="產業類別 (例如: 律師)">
+        </div>
+        <div class="row">
+            <select id="cTrust">
+                <option value="A">A - 高信任</option>
+                <option value="B">B - 熟識</option>
+                <option value="C">C - 普通</option>
+                <option value="D">D - 陌生</option>
+            </select>
+            <select id="cNeed">
+                <option value="X">X - 急需</option>
+                <option value="Y">Y - 有需求</option>
+                <option value="Z">Z - 未知</option>
+            </select>
+        </div>
+        <button class="btn-main" onclick="addContact()">新增人脈資源</button>
+    </div>
+    
+    <div style="overflow-x:auto">
+        <table>
+            <thead><tr><th>策略</th><th>姓名/產業</th><th>操作</th></tr></thead>
+            <tbody id="contact-list"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // --- 1. 初始化 Supabase ---
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let currentMember = null;
+    let gridData = {}; 
+    let myNeeds = [];
+
+    // --- 2. 系統啟動 (身分確認) ---
+    async function initSystem() {
+        const nameInput = document.getElementById('userName');
+        const name = nameInput.value.trim();
+        if (!name) return alert("請輸入姓名");
+
+        document.getElementById('loading').style.display = 'block';
+
+        // 查詢是否已有此會員
+        let { data: members, error } = await db.from('members').select('*').eq('name', name).single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 是 "查無資料" 的代碼
+             alert("連線錯誤，請檢查網路或 API Key");
+             document.getElementById('loading').style.display = 'none';
+             return;
+        }
+
+        if (!members) {
+            // 沒這個人 -> 自動建立新會員
+            const { data: newMember, error: createError } = await db.from('members').insert({ name }).select().single();
+            if (createError) {
+                alert("建立會員失敗：" + createError.message);
+                document.getElementById('loading').style.display = 'none';
+                return;
+            }
+            currentMember = newMember;
+        } else {
+            currentMember = members;
+        }
+
+        // UI 設定
+        document.getElementById('displayUser').innerText = currentMember.name;
+        document.getElementById('identity-overlay').style.opacity = '0';
+        setTimeout(() => document.getElementById('identity-overlay').style.display = 'none', 500);
+
+        // 載入資料
+        renderGridStructure(); // 先把格子畫出來
+        await loadGrid();
+        await loadContacts();
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    // --- 3. 81 宮格邏輯 ---
+    function renderGridStructure() {
+        const el = document.getElementById('mandala');
+        if(el.innerHTML) return; 
+
+        for(let g=0; g<9; g++) {
+            let sub = document.createElement('div'); sub.className='sub-grid';
+            for(let c=0; c<9; c++) {
+                let cell = document.createElement('div'); 
+                let isM = (g===4 && c===4), isC = (c===4);
+                cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
+                
+                let div = document.createElement('div');
+                div.className = 'editable-cell';
+                div.contentEditable = true;
+                let id = `g${g}-c${c}`;
+                div.dataset.id = id; // 用 dataset 存 ID
+                
+                // 唯讀設定：外圍的中心格 (因為它們是同步過來的)
+                if(g!==4 && c===4) div.contentEditable = false; 
+
+                // 失焦存檔事件
+                div.onblur = (e) => {
+                    let val = e.target.innerText;
+                    if(val !== (gridData[id] || '')) {
+                        saveCell(id, val);
+                    }
+                };
+
+                cell.appendChild(div);
+                sub.appendChild(cell);
+            }
+            el.appendChild(sub);
+        }
+    }
+
+    async function loadGrid() {
+        const { data } = await db.from('user_grids').select('*').eq('member_id', currentMember.id);
+        if (data) {
+            data.forEach(item => {
+                gridData[item.grid_index] = item.content;
+                // 填入 DOM
+                let el = document.querySelector(`.editable-cell[data-id="${item.grid_index}"]`);
+                if(el) el.innerText = item.content;
+            });
+        }
+        syncGridVisuals(); // 處理同步顯示
+        checkMatches();    // 觸發配對
+    }
+
+    async function saveCell(index, content) {
+        // 1. 本地更新
+        gridData[index] = content;
+        
+        // 2. 視覺同步 (如果改的是中間那格，要同步到外圍)
+        if(index.startsWith('g4-')) {
+            syncGridVisuals();
+            checkMatches(); // 核心需求改變，重新配對
+        }
+
+        // 3. 雲端存檔 (背景執行)
+        await db.from('user_grids').upsert({
+            member_id: currentMember.id,
+            grid_index: index,
+            content: content
+        }, { onConflict: 'member_id, grid_index' });
+    }
+
+    const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
+    
+    function syncGridVisuals() {
+        // 把中間九宮格 (g4-c0...c8) 的值，同步到外圍對應格子的中心 (gx-c4)
+        for(let i=0; i<9; i++) {
+            if(i === 4) continue; // 中間的核心不需同步
+            let centerVal = gridData[`g4-c${i}`] || '';
+            let targetGridIdx = mapCenterToOuter[i];
+            
+            // 更新數據
+            let targetId = `g${targetGridIdx}-c4`;
+            // 這裡我們不存入 DB，只做視覺同步，或者你也可以選擇存入 DB
+            // 為了簡單，我們只做視覺呈現
+            let el = document.querySelector(`.editable-cell[data-id="${targetId}"]`);
+            if(el) el.innerText = centerVal;
+        }
+    }
+
+    // --- 4. 人脈配對雷達 (Matching Logic) ---
+    async function checkMatches() {
+        // 1. 抓取我的需求 (中間九宮格的字)
+        myNeeds = [];
+        for(let i=0; i<9; i++) {
+            let val = gridData[`g4-c${i}`];
+            if(val && val.trim() !== '' && val !== '核心\n產業') myNeeds.push(val);
+        }
+
+        if(myNeeds.length === 0) {
+            document.getElementById('radar').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('radar').style.display = 'block';
+        const radarDiv = document.getElementById('radar-content');
+        radarDiv.innerHTML = '<small style="color:#666">正在搜尋全分會資料庫...</small>';
+
+        let html = '';
+        let foundAny = false;
+        
+        // 2. 去 user_contacts 搜尋所有含有這些關鍵字的產業
+        // 注意：這裡搜尋的是 "別人" 的人脈
+        for (let need of myNeeds) {
+            const { data } = await db.from('user_contacts')
+                .select('*')
+                .neq('member_id', currentMember.id) // 排除自己
+                .ilike('industry', `%${need}%`) // 模糊搜尋
+                .limit(3); // 每個需求最多顯示 3 筆
+
+            if(data && data.length > 0) {
+                foundAny = true;
+                data.forEach(c => {
+                    // 根據信任度給顏色
+                    let trustColor = c.trust_level === 'A' ? '#d32f2f' : '#666';
+                    html += `
+                        <div class="match-item">
+                            <div>
+                                <span class="match-tag">需求: ${need}</span>
+                                <span style="font-weight:bold; color:#333;">${c.owner_name}</span> 
+                                <span style="font-size:0.85rem">有 ${c.industry} 資源</span>
+                            </div>
+                            <div style="text-align:right">
+                                <div>${c.name}</div>
+                                <small style="color:${trustColor}; font-weight:bold;">信任: ${c.trust_level}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+        
+        if(!foundAny) {
+            radarDiv.innerHTML = '<small style="color:#666">目前資料庫中暫無符合的外部資源。</small>';
+        } else {
+            radarDiv.innerHTML = html;
+        }
+    }
+
+    // --- 5. CRM 邏輯 ---
+    async function loadContacts() {
+        const { data } = await db.from('user_contacts')
+            .select('*')
+            .eq('member_id', currentMember.id)
+            .order('created_at', { ascending: false });
+        
+        const list = document.getElementById('contact-list');
+        list.innerHTML = '';
+        
+        if(data) {
+            data.forEach(c => {
+                // 顏色邏輯
+                let color = '#4caf50'; // 綠 (觀察)
+                if ((c.trust_level === 'A' || c.trust_level === 'B') && (c.need_level === 'X' || c.need_level === 'Y')) {
+                    color = '#f44336'; // 紅 (甜蜜區)
+                } else if (c.trust_level === 'C' && c.need_level === 'X') {
+                    color = '#2196f3'; // 藍 (建立信任)
+                } else if ((c.trust_level === 'A' || c.trust_level === 'B') && c.need_level === 'Z') {
+                    color = '#ff9800'; // 橘 (主動了解)
+                }
+
+                list.innerHTML += `
+                    <tr>
+                        <td><span class="tag" style="background:${color}">${c.trust_level}/${c.need_level}</span></td>
+                        <td>
+                            <b>${c.name}</b> <br>
+                            <small style="color:#666">${c.industry}</small>
+                        </td>
+                        <td>
+                            <button onclick="delContact('${c.id}')" style="color:#f44336; border:none; background:none; cursor:pointer; font-weight:bold; font-size:1rem;">✕</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+    }
+
+    async function addContact() {
+        const name = document.getElementById('cName').value;
+        const ind = document.getElementById('cIndustry').value;
+        if(!name || !ind) return alert("請填寫完整資訊");
+
+        document.getElementById('loading').style.display = 'block';
+        
+        const { error } = await db.from('user_contacts').insert({
+            member_id: currentMember.id,
+            owner_name: currentMember.name,
+            name: name,
+            industry: ind,
+            trust_level: document.getElementById('cTrust').value,
+            need_level: document.getElementById('cNeed').value
+        });
+
+        if(error) {
+            alert("新增失敗");
+        } else {
+            document.getElementById('cName').value = '';
+            document.getElementById('cIndustry').value = '';
+            await loadContacts();
+            // 新增人脈可能會觸發別人的配對，但這裡不需要重新整理自己的配對
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function delContact(id) {
+        if(!confirm("確定刪除這條人脈？")) return;
+        document.getElementById('loading').style.display = 'block';
+        await db.from('user_contacts').delete().eq('id', id);
+        await loadContacts();
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    // --- 頁籤切換 ---
+    function switchTab(t) {
+        document.getElementById('grid-view').classList.toggle('active', t==='grid');
+        document.getElementById('crm-view').classList.toggle('active', t==='crm');
+        const btns = document.querySelectorAll('.tab-btn');
+        btns[0].classList.toggle('active', t==='grid');
+        btns[1].classList.toggle('active', t==='crm');
+    }
+
+</script>
+</body>
+</html>
