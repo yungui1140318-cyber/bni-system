@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈管理系統 (手機優化版)</title>
+    <title>雲貴人脈管理系統 (防呆優化版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -49,28 +49,13 @@
         .btn-del { background: #f44336; color: white; }
         .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
 
-        /* --- Grid (Responsive Fix) --- */
-        .mandala { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); /* Default: Desktop 3x3 */
-            gap: 4px; padding-bottom: 20px; 
-        }
-        .sub-grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            background: #fff; border: 1px solid #ccc; 
-            aspect-ratio: 1/1; 
-        }
+        /* Grid */
+        .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
+        .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
         .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
-        
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
         
-        .grid-select { 
-            width: 100%; height: 100%; border: none; outline: none; background: transparent; 
-            text-align: center; text-align-last: center; font-size: 0.85rem; cursor: pointer; 
-            padding: 0; white-space: pre-wrap; word-break: break-word;
-            appearance: none; -webkit-appearance: none; /* Remove arrow for cleaner look on small cells */
-        }
+        .grid-select { width: 100%; height: 100%; border: none; outline: none; background: transparent; text-align: center; text-align-last: center; font-size: 0.8rem; cursor: pointer; padding: 2px; white-space: pre-wrap; word-break: break-word; appearance: auto; -webkit-appearance: listbox; }
         .grid-select:focus { background: #fffde7; }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.9rem; }
@@ -105,39 +90,12 @@
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
 
-        /* --- 🔥 MOBILE SPECIFIC STYLES --- */
         @media (max-width: 768px) {
-            /* 1. Stack Grid Vertically */
-            .mandala { 
-                grid-template-columns: 1fr; /* 1 column */
-                gap: 15px;
-                max-width: 400px;
-                margin: 0 auto;
-            }
-            
-            /* 2. Increase cell size for easier tapping */
-            .sub-grid {
-                aspect-ratio: auto;
-                min-height: 200px; /* Ensure height */
-            }
-            
-            .cell {
-                min-height: 60px; /* Taller cells */
-            }
-
-            .grid-select {
-                font-size: 14px; /* Prevent iOS zoom on focus */
-                padding: 5px 0;
-            }
-
-            /* 3. Adjust Tables for Mobile */
-            .std-table th, .std-table td {
-                padding: 8px 5px;
-                font-size: 0.85rem;
-            }
-            /* Hide Strategy Tag on super small screens to save space if needed, or wrap */
-            
-            /* 4. Adjust Modal */
+            .mandala { grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
+            .sub-grid { aspect-ratio: auto; min-height: 200px; }
+            .cell { min-height: 60px; }
+            .grid-select { font-size: 14px; padding: 5px 0; }
+            .std-table th, .std-table td { padding: 8px 5px; font-size: 0.85rem; }
             .modal { width: 95%; padding: 15px; }
         }
     </style>
@@ -145,7 +103,6 @@
 <body>
 
 <script>
-    // 🟢 設定區
     const SUPABASE_URL = 'https://htlywcaudjfnneaoikgz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHl3Y2F1ZGpmbm5lYW9pa2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MjExOTIsImV4cCI6MjA4NjI5NzE5Mn0.h5lO8qbOBaQD1vqNwyFmLAGjut6afZN4mDrgmPoxCUg';
 </script>
@@ -313,6 +270,20 @@
             const newName = prompt("請輸入新的產業名稱：");
             if(newName && newName.trim() !== "") {
                 const finalName = newName.trim();
+                
+                // 🔥 核心防呆邏輯：檢查是否重複 (不分大小寫)
+                const exists = industriesList.some(item => item.toLowerCase() === finalName.toLowerCase());
+
+                if (exists) {
+                    alert("這個產業已經在清單中了！系統幫您自動選取。");
+                    // 找出原本正確大小寫的名稱
+                    const originalName = industriesList.find(item => item.toLowerCase() === finalName.toLowerCase());
+                    selectEl.value = originalName;
+                    if(callback) callback(originalName);
+                    return; // 阻止重複新增
+                }
+
+                // 如果沒重複，才執行新增
                 if(!industriesList.includes(finalName)) {
                     industriesList.push(finalName);
                     industriesList.sort();
@@ -320,6 +291,10 @@
                 }
                 await db.from('industries').insert({ name: finalName });
                 if(callback) callback(finalName);
+                
+                // 因為 updateAllSelects 重繪了，這裡要確保選中
+                // 這裡的邏輯依賴 callback 去觸發 saveCell，介面刷新由 updateAllSelects 處理
+                // 對於觸發事件的那個 select，我們手動設回去
                 selectEl.value = finalName; 
             } else {
                 selectEl.value = ""; 
