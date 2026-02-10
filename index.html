@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (分類選單版)</title>
+    <title>雲貴人脈系統 (最終完美版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -54,7 +54,7 @@
         .match-info p { margin: 0; color: #666; font-size: 0.9rem; }
         .match-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; color: #555; }
 
-        /* CRM Form - Updated for Split Select */
+        /* CRM Form */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
@@ -227,17 +227,37 @@
     let myContacts = [];
     let myNeeds = [];
     
-    // Data Structure: { "CategoryName": ["Item1", "Item2"], ... }
     let industryMap = {}; 
-    let allIndustriesFlat = []; // For duplication check
+    let allIndustriesFlat = []; 
 
     if(window.innerWidth < 768) {
         document.getElementById('mobile-hint').style.display = 'block';
     }
 
-    // --- Core: Load & Organize Industries ---
+    // --- 🔥 關鍵修復：嚴格的空白過濾 ---
+    function safelySetSelectValue(selectElement, value) {
+        // 如果值不存在、是 null/undefined、或者 trim 之後是空字串 -> 視為無效，跳過
+        if (!value || typeof value !== 'string' || value.trim() === "") {
+            selectElement.value = ""; // 強制選到空選項
+            return;
+        }
+        
+        // 檢查選單裡有沒有這個值
+        let exists = Array.from(selectElement.options).some(opt => opt.value === value);
+        
+        if (!exists) {
+            // 如果真的有內容（不是空白），但不在清單內，才加 (舊)
+            let opt = document.createElement('option');
+            opt.value = value;
+            opt.innerText = `${value} (舊)`;
+            opt.style.color = "red";
+            selectElement.appendChild(opt);
+        }
+        selectElement.value = value;
+    }
+
+    // --- Load Industries ---
     async function loadIndustries() {
-        // Fetch rows: { category: "Building", name: "Plumbing" }
         let { data, error } = await db.from('industries').select('category, name').order('category').order('name');
         
         industryMap = {};
@@ -256,10 +276,9 @@
         initCRMCategorySelect();
     }
 
-    // 1. Generate HTML for Grid (Optgroups)
+    // 1. Grid HTML (Optgroups)
     function updateGridSelectsHTML() {
         let html = `<option value="">(空)</option>`;
-        
         for (const [cat, items] of Object.entries(industryMap)) {
             html += `<optgroup label="${cat}">`;
             items.forEach(item => {
@@ -267,19 +286,19 @@
             });
             html += `</optgroup>`;
         }
-        
-        // Add "Add New" option at the very end
         html += `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增產業...</option>`;
 
-        // Update all grid selects
         document.querySelectorAll('.grid-select').forEach(sel => {
             let currentVal = sel.value;
+            // 如果當前選到的是空白或無效值，不要傳進去，以免被當成 legacy
+            let valToSet = (!currentVal || currentVal.trim() === "") ? "" : currentVal;
+            
             sel.innerHTML = html;
-            safelySetSelectValue(sel, currentVal);
+            safelySetSelectValue(sel, valToSet);
         });
     }
 
-    // 2. Init CRM Category Select
+    // 2. CRM Selects
     function initCRMCategorySelect() {
         const catSelect = document.getElementById('cCategory');
         let html = `<option value="" disabled selected>1. 選擇大分類</option>`;
@@ -287,56 +306,42 @@
             html += `<option value="${cat}">${cat}</option>`;
         }
         catSelect.innerHTML = html;
-        // Reset sub-select
         document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
     }
 
-    // 3. Update Sub-select based on Category change
     function updateSubIndustrySelect() {
         const cat = document.getElementById('cCategory').value;
         const subSelect = document.getElementById('cIndustry');
-        
         if (!cat || !industryMap[cat]) {
             subSelect.innerHTML = `<option value="" disabled selected>無資料</option>`;
             return;
         }
-
         let html = `<option value="" disabled selected>2. 選擇細項</option>`;
         industryMap[cat].forEach(item => {
             html += `<option value="${item}">${item}</option>`;
         });
-        
-        // Allow adding new item under this category? 
-        // For simplicity, let's keep "Add New" separate or just allow typing if needed.
-        // But for this version, we assume standardized list is enough or they add via Grid first.
-        // Actually, let's add "Add New" here too for consistency.
         html += `<option value="ADD_NEW_CRM" style="color:var(--primary-color); font-weight:bold;">➕ 新增至此分類...</option>`;
-
         subSelect.innerHTML = html;
     }
 
-    // --- Helper: Handle New Item (Global) ---
+    // --- Handle New Item ---
     async function handleNewIndustry(name, category = "未分類") {
         if (!name) return null;
         name = name.trim();
+        if(name === "") return null;
         
-        // Check duplicate
         if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
             alert("此產業已存在！");
-            return name; // Return existing name
+            return name; 
         }
 
-        // Insert DB
         await db.from('industries').insert({ name: name, category: category });
         
-        // Refresh Local Data
         if (!industryMap[category]) industryMap[category] = [];
         industryMap[category].push(name);
         allIndustriesFlat.push(name);
         
-        // Refresh UIs
         updateGridSelectsHTML();
-        // If we are in CRM view, refresh that specific sub-select
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
 
@@ -345,15 +350,10 @@
 
     async function onGridSelectChange(selectEl) {
         if(selectEl.value === 'ADD_NEW') {
-            // Prompt for Category then Name? Or just Name and put in "Other"?
-            // Simple approach: Ask for Name, put in "其他/自訂" or ask for category.
-            // Let's keep it simple: Ask Name, default to "未分類" or ask user to pick category from prompt is too complex.
-            // Better: Simple prompt for Name, save to "未分類" (or "其他").
             let newName = prompt("請輸入新產業名稱 (將存入「其他服務」分類)：");
-            if (newName) {
+            if (newName && newName.trim() !== "") {
                 let savedName = await handleNewIndustry(newName, "🏭 其他服務");
                 selectEl.value = savedName;
-                // Save cell data
                 let id = selectEl.dataset.id;
                 saveCell(id, savedName);
             } else {
@@ -370,7 +370,7 @@
         if (subSelect.value === 'ADD_NEW_CRM') {
             const cat = document.getElementById('cCategory').value;
             let newName = prompt(`請輸入要新增到「${cat}」的產業名稱：`);
-            if (newName) {
+            if (newName && newName.trim() !== "") {
                 let savedName = await handleNewIndustry(newName, cat);
                 subSelect.value = savedName;
             } else {
@@ -379,26 +379,9 @@
         }
     }
     
-    // Bind CRM change
     document.getElementById('cIndustry').addEventListener('change', onCRMSelectChange);
 
-
-    function safelySetSelectValue(selectElement, value) {
-        if (!value) return;
-        let exists = Array.from(selectElement.options).some(opt => opt.value === value);
-        if (!exists) {
-            // Flatten optgroups to find if it exists hidden? No, options collection covers all.
-            // If strictly not found (old data), add temp option
-            let opt = document.createElement('option');
-            opt.value = value;
-            opt.innerText = `${value} (舊)`;
-            opt.style.color = "red";
-            selectElement.appendChild(opt); // Appends to end, outside optgroup usually
-        }
-        selectElement.value = value;
-    }
-
-    // --- Standard App Logic ---
+    // --- Standard Logic ---
     async function login() {
         const name = document.getElementById('loginName').value.trim();
         const pwd = document.getElementById('loginPwd').value.trim();
@@ -424,7 +407,7 @@
         }
 
         renderGridStructure();  
-        await loadIndustries(); // Now loads categories too
+        await loadIndustries(); 
         await loadGrid();       
         await loadContacts();   
         
@@ -490,11 +473,10 @@
                 select.className = 'grid-select';
                 let id = `g${g}-c${c}`;
                 select.dataset.id = id;
-                select.innerHTML = '<option>...</option>'; // Placeholder
+                select.innerHTML = '<option>...</option>'; 
 
                 if(g!==4 && c===4) select.disabled = true; 
 
-                // Use the new handler
                 select.onchange = (e) => onGridSelectChange(e.target);
                 
                 cell.appendChild(select);
@@ -616,8 +598,8 @@
 
     async function addContact() {
         const name = document.getElementById('cName').value;
-        const ind = document.getElementById('cIndustry').value; // Get sub-category value
-        if(!name || !ind || ind.startsWith('ADD_NEW')) return alert("請填寫完整資訊");
+        const ind = document.getElementById('cIndustry').value; 
+        if(!name || !ind || ind.startsWith('ADD_NEW') || ind === "") return alert("請填寫完整資訊");
         
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').insert({
@@ -627,7 +609,6 @@
         });
         if(!error) {
             document.getElementById('cName').value = ''; 
-            // Reset selects
             document.getElementById('cCategory').value = "";
             document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
             await loadContacts();
