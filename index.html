@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈管理系統 (防呆優化版)</title>
+    <title>雲貴人脈系統 (分類選單版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -14,40 +14,23 @@
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .box h2 { margin-top: 0; color: #333; }
         .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; outline: none; }
-        .box input:focus { border-color: var(--primary-color); }
         .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
-        /* Header */
+        /* Layout */
         header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
-        header h1 { margin: 0; font-size: 1.1rem; letter-spacing: 1px; }
+        header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
-        /* Tabs */
         .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
         .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; white-space: nowrap; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; transition: 0.3s; min-width: 80px; display: inline-block; }
-        .tab-btn.active { background: var(--primary-color); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 80px; display: inline-block; }
+        .tab-btn.active { background: var(--primary-color); color: white; }
         .tab-btn-admin { display: none; color: #d32f2f; } 
         .tab-btn-admin.active { background: #333; color: white; }
 
-        /* Content */
         .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; }
         .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Admin & Table */
-        .admin-panel { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); background: white; }
-        .std-table th { background: #333; color: white; padding: 12px; text-align: left; white-space: nowrap; }
-        .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-        .std-table tr:hover { background-color: #f9f9f9; }
-
-        .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; white-space: nowrap; }
-        .btn-edit { background: #2196f3; color: white; }
-        .btn-del { background: #f44336; color: white; }
-        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: 0.2s; }
 
         /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
@@ -55,38 +38,52 @@
         .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
         
-        .grid-select { width: 100%; height: 100%; border: none; outline: none; background: transparent; text-align: center; text-align-last: center; font-size: 0.8rem; cursor: pointer; padding: 2px; white-space: pre-wrap; word-break: break-word; appearance: auto; -webkit-appearance: listbox; }
-        .grid-select:focus { background: #fffde7; }
+        .grid-select { 
+            width: 100%; height: 100%; border: none; outline: none; background: transparent; 
+            text-align: center; text-align-last: center; font-size: 0.8rem; cursor: pointer; 
+            padding: 2px; appearance: auto; -webkit-appearance: listbox; 
+        }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.9rem; }
-        .master .grid-select option { color: #333; }
+        .master .grid-select option, .master .grid-select optgroup { color: #333; }
 
-        /* Match */
+        /* Match Cards */
         .match-card { background: white; border-left: 5px solid #2196f3; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .match-card.sweet { border-left-color: #e91e63; background: #fff0f6; }
         .match-info h4 { margin: 0 0 5px 0; color: #333; }
         .match-info p { margin: 0; color: #666; font-size: 0.9rem; }
-        .match-meta { text-align: right; }
-        .match-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; color: #555; margin-bottom: 4px; }
+        .match-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; color: #555; }
 
-        /* CRM */
+        /* CRM Form - Updated for Split Select */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
+        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
 
-        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: #333; font-weight: bold; display: inline-block; border: 1px solid transparent;}
-        .tag-pink { background-color: #fce4ec; color: #c2185b; border-color: #f8bbd0; }
-        .tag-blue { background-color: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
-        .tag-yellow { background-color: #fff9c4; color: #fbc02d; border-color: #fff59d; }
-        .tag-green { background-color: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+        /* Table & Tags */
+        .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); background: white; }
+        .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
+        .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        
+        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: #333; font-weight: bold; display: inline-block; }
+        .tag-pink { background-color: #fce4ec; color: #c2185b; }
+        .tag-blue { background-color: #e3f2fd; color: #1565c0; }
+        .tag-yellow { background-color: #fff9c4; color: #fbc02d; }
+        .tag-green { background-color: #e8f5e9; color: #2e7d32; }
 
-        /* Log Modal */
+        /* Admin */
+        .admin-panel { background: white; border-radius: 8px; padding: 15px; }
+        .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
+        .btn-edit { background: #2196f3; color: white; }
+        .btn-del { background: #f44336; color: white; }
+
+        /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
         .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.2s ease; max-height: 90vh; overflow-y: auto; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; resize: vertical; box-sizing: border-box;}
         .log-entry { background: #f9f9f9; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0; }
-        .log-date { font-weight: bold; color: var(--primary-color); font-size: 0.8rem; display: block; margin-bottom: 3px; }
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
 
@@ -95,7 +92,6 @@
             .sub-grid { aspect-ratio: auto; min-height: 200px; }
             .cell { min-height: 60px; }
             .grid-select { font-size: 14px; padding: 5px 0; }
-            .std-table th, .std-table td { padding: 8px 5px; font-size: 0.85rem; }
             .modal { width: 95%; padding: 15px; }
         }
     </style>
@@ -142,7 +138,7 @@
 
 <div id="matches-view" class="container">
     <div style="margin-bottom:15px; color:#666; font-size:0.9rem; padding:10px; background:#e3f2fd; border-radius:4px;">
-        💡 系統會根據您 <b>81 宮格核心圈 (中間九格)</b> 的需求，自動搜尋全分會夥伴的人脈庫。
+        💡 系統會根據您 <b>81 宮格核心圈</b> 的需求，自動搜尋全分會夥伴的人脈庫。
     </div>
     <div id="match-results"></div>
 </div>
@@ -151,10 +147,16 @@
     <div class="crm-form">
         <div class="row">
             <input id="cName" placeholder="人脈姓名">
+        </div>
+        <div class="row" style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #eee;">
+            <select id="cCategory" onchange="updateSubIndustrySelect()">
+                <option value="" disabled selected>1. 選擇大分類</option>
+            </select>
             <select id="cIndustry">
-                <option value="" disabled selected>載入中...</option>
+                <option value="" disabled selected>2. 選擇細項</option>
             </select>
         </div>
+
         <div class="row">
             <select id="cTrust">
                 <option value="A">A.極熟悉信任</option>
@@ -224,86 +226,179 @@
     let gridData = {}; 
     let myContacts = [];
     let myNeeds = [];
-    let industriesList = []; 
+    
+    // Data Structure: { "CategoryName": ["Item1", "Item2"], ... }
+    let industryMap = {}; 
+    let allIndustriesFlat = []; // For duplication check
 
     if(window.innerWidth < 768) {
         document.getElementById('mobile-hint').style.display = 'block';
     }
 
+    // --- Core: Load & Organize Industries ---
+    async function loadIndustries() {
+        // Fetch rows: { category: "Building", name: "Plumbing" }
+        let { data, error } = await db.from('industries').select('category, name').order('category').order('name');
+        
+        industryMap = {};
+        allIndustriesFlat = [];
+
+        if (data) {
+            data.forEach(row => {
+                let cat = row.category || "未分類";
+                if (!industryMap[cat]) industryMap[cat] = [];
+                industryMap[cat].push(row.name);
+                allIndustriesFlat.push(row.name);
+            });
+        }
+
+        updateGridSelectsHTML();
+        initCRMCategorySelect();
+    }
+
+    // 1. Generate HTML for Grid (Optgroups)
+    function updateGridSelectsHTML() {
+        let html = `<option value="">(空)</option>`;
+        
+        for (const [cat, items] of Object.entries(industryMap)) {
+            html += `<optgroup label="${cat}">`;
+            items.forEach(item => {
+                html += `<option value="${item}">${item}</option>`;
+            });
+            html += `</optgroup>`;
+        }
+        
+        // Add "Add New" option at the very end
+        html += `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增產業...</option>`;
+
+        // Update all grid selects
+        document.querySelectorAll('.grid-select').forEach(sel => {
+            let currentVal = sel.value;
+            sel.innerHTML = html;
+            safelySetSelectValue(sel, currentVal);
+        });
+    }
+
+    // 2. Init CRM Category Select
+    function initCRMCategorySelect() {
+        const catSelect = document.getElementById('cCategory');
+        let html = `<option value="" disabled selected>1. 選擇大分類</option>`;
+        for (const cat of Object.keys(industryMap)) {
+            html += `<option value="${cat}">${cat}</option>`;
+        }
+        catSelect.innerHTML = html;
+        // Reset sub-select
+        document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
+    }
+
+    // 3. Update Sub-select based on Category change
+    function updateSubIndustrySelect() {
+        const cat = document.getElementById('cCategory').value;
+        const subSelect = document.getElementById('cIndustry');
+        
+        if (!cat || !industryMap[cat]) {
+            subSelect.innerHTML = `<option value="" disabled selected>無資料</option>`;
+            return;
+        }
+
+        let html = `<option value="" disabled selected>2. 選擇細項</option>`;
+        industryMap[cat].forEach(item => {
+            html += `<option value="${item}">${item}</option>`;
+        });
+        
+        // Allow adding new item under this category? 
+        // For simplicity, let's keep "Add New" separate or just allow typing if needed.
+        // But for this version, we assume standardized list is enough or they add via Grid first.
+        // Actually, let's add "Add New" here too for consistency.
+        html += `<option value="ADD_NEW_CRM" style="color:var(--primary-color); font-weight:bold;">➕ 新增至此分類...</option>`;
+
+        subSelect.innerHTML = html;
+    }
+
+    // --- Helper: Handle New Item (Global) ---
+    async function handleNewIndustry(name, category = "未分類") {
+        if (!name) return null;
+        name = name.trim();
+        
+        // Check duplicate
+        if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
+            alert("此產業已存在！");
+            return name; // Return existing name
+        }
+
+        // Insert DB
+        await db.from('industries').insert({ name: name, category: category });
+        
+        // Refresh Local Data
+        if (!industryMap[category]) industryMap[category] = [];
+        industryMap[category].push(name);
+        allIndustriesFlat.push(name);
+        
+        // Refresh UIs
+        updateGridSelectsHTML();
+        // If we are in CRM view, refresh that specific sub-select
+        const crmCat = document.getElementById('cCategory').value;
+        if(crmCat === category) updateSubIndustrySelect();
+
+        return name;
+    }
+
+    async function onGridSelectChange(selectEl) {
+        if(selectEl.value === 'ADD_NEW') {
+            // Prompt for Category then Name? Or just Name and put in "Other"?
+            // Simple approach: Ask for Name, put in "其他/自訂" or ask for category.
+            // Let's keep it simple: Ask Name, default to "未分類" or ask user to pick category from prompt is too complex.
+            // Better: Simple prompt for Name, save to "未分類" (or "其他").
+            let newName = prompt("請輸入新產業名稱 (將存入「其他服務」分類)：");
+            if (newName) {
+                let savedName = await handleNewIndustry(newName, "🏭 其他服務");
+                selectEl.value = savedName;
+                // Save cell data
+                let id = selectEl.dataset.id;
+                saveCell(id, savedName);
+            } else {
+                selectEl.value = "";
+            }
+        } else {
+            let id = selectEl.dataset.id;
+            saveCell(id, selectEl.value);
+        }
+    }
+
+    async function onCRMSelectChange() {
+        const subSelect = document.getElementById('cIndustry');
+        if (subSelect.value === 'ADD_NEW_CRM') {
+            const cat = document.getElementById('cCategory').value;
+            let newName = prompt(`請輸入要新增到「${cat}」的產業名稱：`);
+            if (newName) {
+                let savedName = await handleNewIndustry(newName, cat);
+                subSelect.value = savedName;
+            } else {
+                subSelect.value = "";
+            }
+        }
+    }
+    
+    // Bind CRM change
+    document.getElementById('cIndustry').addEventListener('change', onCRMSelectChange);
+
+
     function safelySetSelectValue(selectElement, value) {
         if (!value) return;
         let exists = Array.from(selectElement.options).some(opt => opt.value === value);
         if (!exists) {
+            // Flatten optgroups to find if it exists hidden? No, options collection covers all.
+            // If strictly not found (old data), add temp option
             let opt = document.createElement('option');
             opt.value = value;
             opt.innerText = `${value} (舊)`;
             opt.style.color = "red";
-            selectElement.appendChild(opt);
+            selectElement.appendChild(opt); // Appends to end, outside optgroup usually
         }
         selectElement.value = value;
     }
 
-    async function loadIndustries() {
-        let { data, error } = await db.from('industries').select('name').order('name');
-        if (data) industriesList = data.map(i => i.name);
-        else industriesList = ["載入失敗"];
-        updateAllSelects();
-    }
-
-    function updateAllSelects() {
-        let opts = `<option value="">(空)</option>`;
-        industriesList.forEach(ind => { opts += `<option value="${ind}">${ind}</option>`; });
-        opts += `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增產業...</option>`;
-
-        const crmSelect = document.getElementById('cIndustry');
-        if(crmSelect) crmSelect.innerHTML = `<option value="" disabled selected>請選擇產業...</option>` + opts;
-
-        document.querySelectorAll('.grid-select').forEach(sel => {
-            let currentVal = sel.value; 
-            sel.innerHTML = opts;
-            safelySetSelectValue(sel, currentVal); 
-        });
-    }
-
-    async function handleNewIndustryChange(selectEl, callback) {
-        if(selectEl.value === 'ADD_NEW') {
-            const newName = prompt("請輸入新的產業名稱：");
-            if(newName && newName.trim() !== "") {
-                const finalName = newName.trim();
-                
-                // 🔥 核心防呆邏輯：檢查是否重複 (不分大小寫)
-                const exists = industriesList.some(item => item.toLowerCase() === finalName.toLowerCase());
-
-                if (exists) {
-                    alert("這個產業已經在清單中了！系統幫您自動選取。");
-                    // 找出原本正確大小寫的名稱
-                    const originalName = industriesList.find(item => item.toLowerCase() === finalName.toLowerCase());
-                    selectEl.value = originalName;
-                    if(callback) callback(originalName);
-                    return; // 阻止重複新增
-                }
-
-                // 如果沒重複，才執行新增
-                if(!industriesList.includes(finalName)) {
-                    industriesList.push(finalName);
-                    industriesList.sort();
-                    updateAllSelects();
-                }
-                await db.from('industries').insert({ name: finalName });
-                if(callback) callback(finalName);
-                
-                // 因為 updateAllSelects 重繪了，這裡要確保選中
-                // 這裡的邏輯依賴 callback 去觸發 saveCell，介面刷新由 updateAllSelects 處理
-                // 對於觸發事件的那個 select，我們手動設回去
-                selectEl.value = finalName; 
-            } else {
-                selectEl.value = ""; 
-            }
-        } else {
-            if(callback) callback(selectEl.value);
-        }
-    }
-
+    // --- Standard App Logic ---
     async function login() {
         const name = document.getElementById('loginName').value.trim();
         const pwd = document.getElementById('loginPwd').value.trim();
@@ -329,19 +424,16 @@
         }
 
         renderGridStructure();  
-        await loadIndustries(); 
+        await loadIndustries(); // Now loads categories too
         await loadGrid();       
         await loadContacts();   
         
-        document.getElementById('cIndustry').addEventListener('change', function() {
-            handleNewIndustryChange(this);
-        });
-
         document.getElementById('loading').style.display = 'none';
     }
 
     function logout() { location.reload(); }
 
+    // Admin
     async function loadMembers() {
         if(currentMember.role !== 'admin') return;
         const { data } = await db.from('members').select('*').order('created_at', {ascending: true});
@@ -365,37 +457,28 @@
         if(!name || !pwd) return alert("請輸入姓名與密碼");
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('members').insert({ name: name, password: pwd, role: 'user' });
-        if(error) alert("新增失敗: " + error.message);
-        else {
-            document.getElementById('newMemName').value = ''; document.getElementById('newMemPwd').value = '';
-            loadMembers(); alert("新增成功");
-        }
+        if(error) alert("新增失敗"); else { document.getElementById('newMemName').value = ''; document.getElementById('newMemPwd').value = ''; loadMembers(); alert("新增成功"); }
         document.getElementById('loading').style.display = 'none';
     }
 
     async function resetPwd(id, name) {
         const newPwd = prompt(`請輸入 ${name} 的新密碼:`);
         if(!newPwd) return;
-        document.getElementById('loading').style.display = 'block';
-        const { error } = await db.from('members').update({ password: newPwd }).eq('id', id);
-        if(error) alert("更新失敗"); else alert("密碼已更新");
-        document.getElementById('loading').style.display = 'none';
+        await db.from('members').update({ password: newPwd }).eq('id', id);
+        alert("密碼已更新");
     }
 
     async function deleteMember(id, name) {
-        if(!confirm(`確定要刪除 ${name} 嗎？此動作無法復原！`)) return;
-        document.getElementById('loading').style.display = 'block';
-        const { error } = await db.from('members').delete().eq('id', id);
-        if(error) alert("刪除失敗"); else loadMembers();
-        document.getElementById('loading').style.display = 'none';
+        if(!confirm(`確定要刪除 ${name} 嗎？`)) return;
+        await db.from('members').delete().eq('id', id);
+        loadMembers();
     }
 
+    // Grid
     function renderGridStructure() {
         const el = document.getElementById('mandala');
         if(el.innerHTML) return; 
         
-        let initialOpts = '<option value="">(讀取中)</option>';
-
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
@@ -407,20 +490,12 @@
                 select.className = 'grid-select';
                 let id = `g${g}-c${c}`;
                 select.dataset.id = id;
-                select.innerHTML = initialOpts;
+                select.innerHTML = '<option>...</option>'; // Placeholder
 
                 if(g!==4 && c===4) select.disabled = true; 
 
-                select.onchange = (e) => {
-                    let currentSelect = e.target;
-                    handleNewIndustryChange(currentSelect, (finalVal) => {
-                        let el = document.querySelector(`.grid-select[data-id="${id}"]`);
-                        if(el) {
-                            el.value = finalVal;
-                            if(finalVal !== (gridData[id] || '')) saveCell(id, finalVal);
-                        }
-                    });
-                };
+                // Use the new handler
+                select.onchange = (e) => onGridSelectChange(e.target);
                 
                 cell.appendChild(select);
                 sub.appendChild(cell);
@@ -435,9 +510,7 @@
             data.forEach(item => {
                 gridData[item.grid_index] = item.content;
                 let el = document.querySelector(`.grid-select[data-id="${item.grid_index}"]`);
-                if(el) {
-                    safelySetSelectValue(el, item.content);
-                }
+                if(el) safelySetSelectValue(el, item.content);
             });
         }
         syncGridVisuals();
@@ -460,6 +533,7 @@
         }
     }
 
+    // Match
     async function loadMatches() {
         const resDiv = document.getElementById('match-results');
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
@@ -505,10 +579,10 @@
                 });
             }
         }
-
-        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">尚未找到符合您需求的資源。<br>（請確認大家都已更新為標準產業名稱）</div>';
+        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">尚未找到符合您需求的資源。</div>';
     }
 
+    // CRM
     async function loadContacts() {
         const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id).order('created_at', { ascending: false });
         myContacts = data || []; 
@@ -527,9 +601,7 @@
                 <tr>
                     <td><span class="tag ${strategy.class}">${strategy.text}</span></td>
                     <td><b>${c.name}</b><br><small style="color:#666">${c.industry}</small></td>
-                    <td>
-                        <button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index}, -1)">${logBtnText}</button>
-                    </td>
+                    <td><button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index}, -1)">${logBtnText}</button></td>
                     <td><button onclick="delContact('${c.id}')" style="color:#f44336;border:none;background:none;cursor:pointer">✕</button></td>
                 </tr>`;
         });
@@ -544,8 +616,8 @@
 
     async function addContact() {
         const name = document.getElementById('cName').value;
-        const ind = document.getElementById('cIndustry').value;
-        if(!name || !ind || ind === 'ADD_NEW') return alert("請填寫資訊並選擇產業");
+        const ind = document.getElementById('cIndustry').value; // Get sub-category value
+        if(!name || !ind || ind.startsWith('ADD_NEW')) return alert("請填寫完整資訊");
         
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').insert({
@@ -554,7 +626,10 @@
             logs: []
         });
         if(!error) {
-            document.getElementById('cName').value = ''; document.getElementById('cIndustry').value = '';
+            document.getElementById('cName').value = ''; 
+            // Reset selects
+            document.getElementById('cCategory').value = "";
+            document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
             await loadContacts();
         }
         document.getElementById('loading').style.display = 'none';
@@ -566,108 +641,60 @@
         await loadContacts();
     }
 
-    let editingContactIdx = -1;
-    let editingLogIdx = -1;
-
+    // Logs
+    let editingContactIdx = -1, editingLogIdx = -1;
     function openLogModal(cIdx, lIdx) {
-        editingContactIdx = cIdx;
-        editingLogIdx = lIdx;
-        const now = new Date();
-        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        
+        editingContactIdx = cIdx; editingLogIdx = lIdx;
+        const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         let contact = myContacts[cIdx];
         let contentHtml = '';
-        
         if(contact.logs && contact.logs.length > 0) {
             contact.logs.forEach((l, idx) => {
-                contentHtml += `
-                    <div class="log-entry">
-                         <span class="log-date">${l.date} 
-                            <button class="btn-sm" style="float:right; color:red; padding:0;" onclick="deleteLog(${cIdx}, ${idx})">✕</button>
-                         </span>
-                         <div class="log-content">${l.content}</div>
-                    </div>`;
+                contentHtml += `<div class="log-entry"><span class="log-date">${l.date} <button class="btn-sm" style="float:right; color:red; padding:0;" onclick="deleteLog(${cIdx}, ${idx})">✕</button></span><div class="log-content">${l.content}</div></div>`;
             });
             contentHtml += `<hr style="margin:15px 0; border:0; border-top:1px solid #eee;">`;
         }
-        
         let modalBody = document.querySelector('.modal');
         let historyDiv = document.getElementById('logHistory');
         if(!historyDiv) {
-            historyDiv = document.createElement('div');
-            historyDiv.id = 'logHistory';
-            historyDiv.style.maxHeight = '150px';
-            historyDiv.style.overflowY = 'auto';
-            historyDiv.style.marginBottom = '10px';
+            historyDiv = document.createElement('div'); historyDiv.id = 'logHistory';
+            historyDiv.style.maxHeight = '150px'; historyDiv.style.overflowY = 'auto'; historyDiv.style.marginBottom = '10px';
             modalBody.insertBefore(historyDiv, document.getElementById('modalTitle').nextSibling);
         }
         historyDiv.innerHTML = contentHtml;
-
         document.getElementById('modalTitle').innerText = `面談紀錄：${contact.name}`;
         document.getElementById('logDate').value = now.toISOString().slice(0, 16);
         document.getElementById('logContent').value = ''; 
-        
         document.getElementById('logModal').style.display = 'flex';
     }
-
-    function closeLogModal() {
-        document.getElementById('logModal').style.display = 'none';
-    }
-
+    function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
     async function saveLog() {
         if(editingContactIdx === -1) return;
-        
         let dateVal = document.getElementById('logDate').value.replace('T', ' ');
         let content = document.getElementById('logContent').value;
         if(!content) return alert("請輸入內容");
-
         let contact = myContacts[editingContactIdx];
         let logs = contact.logs || [];
-
         logs.unshift({ date: dateVal, content: content });
-
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        
-        if(error) alert("儲存失敗");
-        else {
-            closeLogModal();
-            loadContacts();
-        }
+        if(error) alert("儲存失敗"); else { closeLogModal(); loadContacts(); }
         document.getElementById('loading').style.display = 'none';
     }
-
     async function deleteLog(cIdx, lIdx) {
-        if(!confirm("刪除這條紀錄？")) return;
-        let contact = myContacts[cIdx];
-        let logs = contact.logs;
-        logs.splice(lIdx, 1);
-        
+        if(!confirm("刪除紀錄？")) return;
+        let contact = myContacts[cIdx]; let logs = contact.logs; logs.splice(lIdx, 1);
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        if(!error) {
-            openLogModal(cIdx, -1);
-            loadContacts();
-        }
+        if(!error) { openLogModal(cIdx, -1); loadContacts(); }
     }
 
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-        if(t==='grid') {
-            document.getElementById('grid-view').classList.add('active');
-            document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        } else if(t==='matches') {
-            document.getElementById('matches-view').classList.add('active');
-            document.querySelectorAll('.tab-btn')[1].classList.add('active');
-            loadMatches();
-        } else if(t==='crm') {
-            document.getElementById('crm-view').classList.add('active');
-            document.querySelectorAll('.tab-btn')[2].classList.add('active');
-        } else if(t==='admin') {
-            document.getElementById('admin-view').classList.add('active');
-            document.getElementById('adminTabBtn').classList.add('active');
-        }
+        if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
+        else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
+        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
+        else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); }
     }
 </script>
 </body>
