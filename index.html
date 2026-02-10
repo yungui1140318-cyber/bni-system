@@ -3,19 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>雲貴人脈管理系統 (共用清單版)</title>
+    <title>雲貴人脈管理系統 (修復顯示版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg-color); height: 100vh; display: flex; flex-direction: column; color: var(--text-color); }
 
         /* Login Overlay */
-        #identity-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--primary-color); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 0.5s;
-        }
+        #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .box h2 { margin-top: 0; color: #333; }
         .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; outline: none; }
@@ -40,7 +35,7 @@
         .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Admin & Table Styles */
+        /* Admin & Table */
         .admin-panel { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
@@ -49,7 +44,6 @@
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
         .std-table tr:hover { background-color: #f9f9f9; }
 
-        /* Buttons */
         .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
         .btn-edit { background: #2196f3; color: white; }
         .btn-del { background: #f44336; color: white; }
@@ -61,18 +55,20 @@
         .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
         
-        .grid-select {
-            width: 100%; height: 100%; border: none; outline: none; background: transparent;
-            text-align: center; text-align-last: center; 
-            font-size: 0.8rem; cursor: pointer; appearance: none; -webkit-appearance: none;
+        /* 🔥 修正樣式：確保下拉選單看得到 */
+        .grid-select { 
+            width: 100%; height: 100%; border: none; outline: none; background: transparent; 
+            text-align: center; text-align-last: center; font-size: 0.8rem; cursor: pointer; 
             padding: 2px; white-space: pre-wrap; word-break: break-word;
+            /* 讓瀏覽器預設箭頭顯示出來，避免看起來像空白 */
+            appearance: auto; -webkit-appearance: listbox; 
         }
         .grid-select:focus { background: #fffde7; }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.9rem; }
         .master .grid-select option { color: #333; }
 
-        /* Match View Styles */
+        /* Match */
         .match-card { background: white; border-left: 5px solid #2196f3; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .match-card.sweet { border-left-color: #e91e63; background: #fff0f6; }
         .match-info h4 { margin: 0 0 5px 0; color: #333; }
@@ -80,12 +76,11 @@
         .match-meta { text-align: right; }
         .match-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; color: #555; margin-bottom: 4px; }
 
-        /* CRM Form */
+        /* CRM */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
 
-        /* Tags */
         .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: #333; font-weight: bold; display: inline-block; border: 1px solid transparent;}
         .tag-pink { background-color: #fce4ec; color: #c2185b; border-color: #f8bbd0; }
         .tag-blue { background-color: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
@@ -97,7 +92,6 @@
         .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.2s ease; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .modal textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; resize: vertical; box-sizing: border-box;}
-        
         .log-entry { background: #f9f9f9; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0; }
         .log-date { font-weight: bold; color: var(--primary-color); font-size: 0.8rem; display: block; margin-bottom: 3px; }
 
@@ -226,75 +220,64 @@
     let gridData = {}; 
     let myContacts = [];
     let myNeeds = [];
-    let industriesList = []; // Shared options list
+    let industriesList = []; 
 
-    // --- Core: Load Industries from DB ---
-    async function loadIndustries() {
-        // Fetch from Supabase
-        let { data, error } = await db.from('industries').select('name').order('name');
-        
-        if (data) {
-            industriesList = data.map(i => i.name);
-        } else {
-            industriesList = ["載入失敗"]; // Fallback
+    // --- Helper: Safely set select value ---
+    function safelySetSelectValue(selectElement, value) {
+        if (!value) return;
+        // Check if value exists
+        let exists = Array.from(selectElement.options).some(opt => opt.value === value);
+        if (!exists) {
+            let opt = document.createElement('option');
+            opt.value = value;
+            opt.innerText = `${value} (舊)`;
+            opt.style.color = "red";
+            selectElement.appendChild(opt);
         }
+        selectElement.value = value;
+    }
 
-        // Update all select elements on the page (CRM + Grid)
+    // --- Load Industries ---
+    async function loadIndustries() {
+        let { data, error } = await db.from('industries').select('name').order('name');
+        if (data) industriesList = data.map(i => i.name);
+        else industriesList = ["載入失敗"];
         updateAllSelects();
     }
 
     function updateAllSelects() {
-        // 1. Prepare HTML options
         let opts = `<option value="">(空)</option>`;
-        industriesList.forEach(ind => {
-            opts += `<option value="${ind}">${ind}</option>`;
-        });
-        opts += `<option value="ADD_NEW" style="color:${getComputedStyle(document.documentElement).getPropertyValue('--primary-color')}; font-weight:bold;">➕ 新增產業...</option>`;
+        industriesList.forEach(ind => { opts += `<option value="${ind}">${ind}</option>`; });
+        opts += `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增產業...</option>`;
 
-        // 2. Update CRM form
         const crmSelect = document.getElementById('cIndustry');
         if(crmSelect) crmSelect.innerHTML = `<option value="" disabled selected>請選擇產業...</option>` + opts;
 
-        // 3. Update Grid Selects (if rendered)
         document.querySelectorAll('.grid-select').forEach(sel => {
-            let currentVal = sel.value; // Keep selection
+            let currentVal = sel.value; 
             sel.innerHTML = opts;
-            sel.value = currentVal;
-            // Handle old data not in list
-            if(currentVal && !sel.value) {
-                let tempOpt = document.createElement('option');
-                tempOpt.value = currentVal;
-                tempOpt.innerText = currentVal + " (舊)";
-                tempOpt.selected = true;
-                sel.appendChild(tempOpt);
-            }
+            safelySetSelectValue(sel, currentVal); 
         });
     }
 
-    // --- Core: Handle New Industry Addition ---
     async function handleNewIndustryChange(selectEl, callback) {
         if(selectEl.value === 'ADD_NEW') {
             const newName = prompt("請輸入新的產業名稱：");
             if(newName && newName.trim() !== "") {
                 const finalName = newName.trim();
-                // 1. Optimistic update (for speed)
                 if(!industriesList.includes(finalName)) {
                     industriesList.push(finalName);
                     industriesList.sort();
                     updateAllSelects();
                 }
                 
-                // 2. Set this select to the new value
-                selectEl.value = finalName;
-                if(callback) callback(finalName);
-
-                // 3. Save to DB
                 await db.from('industries').insert({ name: finalName });
+                if(callback) callback(finalName);
+                selectEl.value = finalName; 
             } else {
-                selectEl.value = ""; // Cancelled
+                selectEl.value = ""; 
             }
         } else {
-            // Normal change
             if(callback) callback(selectEl.value);
         }
     }
@@ -324,13 +307,12 @@
             loadMembers();
         }
 
-        // Init Sequence
-        await loadIndustries(); // Get options first
-        renderGridStructure();  // Draw grid
-        await loadGrid();       // Fill grid
-        await loadContacts();   // Fill CRM
+        // 🔥 關鍵順序調整：先畫格子 -> 再抓資料
+        renderGridStructure();  // 1. 先把格子畫出來
+        await loadIndustries(); // 2. 抓選項填入選單
+        await loadGrid();       // 3. 抓使用者的資料填進去
+        await loadContacts();   // 4. 抓人脈
         
-        // Bind CRM select change event
         document.getElementById('cIndustry').addEventListener('change', function() {
             handleNewIndustryChange(this);
         });
@@ -394,6 +376,8 @@
         const el = document.getElementById('mandala');
         if(el.innerHTML) return; 
         
+        let initialOpts = '<option value="">(讀取中)</option>';
+
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
@@ -401,23 +385,22 @@
                 let isM = (g===4 && c===4), isC = (c===4);
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
                 
-                // Create SELECT
                 let select = document.createElement('select');
                 select.className = 'grid-select';
                 let id = `g${g}-c${c}`;
                 select.dataset.id = id;
-                
-                // Initial empty populate (will be filled by loadIndustries)
-                select.innerHTML = '<option value="">(讀取中)</option>';
+                select.innerHTML = initialOpts;
 
-                if(g!==4 && c===4) {
-                    select.disabled = true; // Sync cells readonly
-                }
+                if(g!==4 && c===4) select.disabled = true; 
 
-                // Bind Change Event (Includes New Item Logic)
                 select.onchange = (e) => {
-                    handleNewIndustryChange(e.target, (finalVal) => {
-                        if(finalVal !== (gridData[id] || '')) saveCell(id, finalVal);
+                    let currentSelect = e.target;
+                    handleNewIndustryChange(currentSelect, (finalVal) => {
+                        let el = document.querySelector(`.grid-select[data-id="${id}"]`);
+                        if(el) {
+                            el.value = finalVal;
+                            if(finalVal !== (gridData[id] || '')) saveCell(id, finalVal);
+                        }
                     });
                 };
                 
@@ -435,15 +418,7 @@
                 gridData[item.grid_index] = item.content;
                 let el = document.querySelector(`.grid-select[data-id="${item.grid_index}"]`);
                 if(el) {
-                    el.value = item.content;
-                    // Handle legacy data not in list
-                    if(!el.value && item.content) {
-                        let opt = document.createElement('option');
-                        opt.value = item.content;
-                        opt.innerText = item.content + " (舊)";
-                        opt.selected = true;
-                        el.appendChild(opt);
-                    }
+                    safelySetSelectValue(el, item.content);
                 }
             });
         }
@@ -463,17 +438,7 @@
             let centerVal = gridData[`g4-c${i}`] || '';
             let targetId = `g${mapCenterToOuter[i]}-c4`;
             let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
-            if(el) {
-                // Check if value exists in options, if not force it (for display)
-                el.value = centerVal;
-                if(!el.value && centerVal) {
-                     let opt = document.createElement('option');
-                     opt.value = centerVal;
-                     opt.innerText = centerVal;
-                     opt.selected = true;
-                     el.appendChild(opt);
-                }
-            }
+            if(el) safelySetSelectValue(el, centerVal);
         }
     }
 
@@ -500,7 +465,7 @@
             const { data } = await db.from('user_contacts')
                 .select('*')
                 .neq('member_id', currentMember.id)
-                .eq('industry', need); // Exact match because of standard list
+                .eq('industry', need); 
 
             if(data && data.length > 0) {
                 foundAny = true;
@@ -524,7 +489,7 @@
             }
         }
 
-        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">目前分會夥伴的人脈庫中，尚未找到符合您需求的資源。<br>（請確認大家都已更新為標準產業名稱）</div>';
+        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">尚未找到符合您需求的資源。<br>（請確認大家都已更新為標準產業名稱）</div>';
     }
 
     // --- CRM Logic & Logs ---
