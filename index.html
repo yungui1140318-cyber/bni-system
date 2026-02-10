@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (最終完美版)</title>
+    <title>雲貴人脈系統 (辯論修正版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -28,14 +28,14 @@
         .tab-btn-admin { display: none; color: #d32f2f; } 
         .tab-btn-admin.active { background: #333; color: white; }
 
-        .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; }
+        .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
         .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
-        .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; }
+        .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; position: relative; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
         
         .grid-select { 
@@ -73,6 +73,7 @@
 
         /* Admin */
         .admin-panel { background: white; border-radius: 8px; padding: 15px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
         .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
         .btn-edit { background: #2196f3; color: white; }
@@ -80,17 +81,21 @@
 
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
-        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.2s ease; max-height: 90vh; overflow-y: auto; }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.2s ease; max-height: 90vh; display: flex; flex-direction: column; }
         @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; resize: vertical; box-sizing: border-box;}
-        .log-entry { background: #f9f9f9; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0; }
+        .modal textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; resize: vertical; box-sizing: border-box; font-family: inherit;}
+        
+        /* Log History Scroll Area */
+        #logHistoryContainer { max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #eee; padding: 5px; border-radius: 4px; background: #fafafa; }
+        .log-entry { background: #fff; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .log-date { display: block; font-size: 0.75rem; color: #888; margin-bottom: 3px; display: flex; justify-content: space-between; }
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
 
         @media (max-width: 768px) {
             .mandala { grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
-            .sub-grid { aspect-ratio: auto; min-height: 200px; }
-            .cell { min-height: 60px; }
+            .sub-grid { aspect-ratio: auto; min-height: 180px; }
+            .cell { min-height: 50px; }
             .grid-select { font-size: 14px; padding: 5px 0; }
             .modal { width: 95%; padding: 15px; }
         }
@@ -99,6 +104,7 @@
 <body>
 
 <script>
+    // 注意：請確保你的 Supabase RLS 規則設定正確，否則 Anon Key 可能會有權限問題
     const SUPABASE_URL = 'https://htlywcaudjfnneaoikgz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHl3Y2F1ZGpmbm5lYW9pa2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MjExOTIsImV4cCI6MjA4NjI5NzE5Mn0.h5lO8qbOBaQD1vqNwyFmLAGjut6afZN4mDrgmPoxCUg';
 </script>
@@ -138,7 +144,7 @@
 
 <div id="matches-view" class="container">
     <div style="margin-bottom:15px; color:#666; font-size:0.9rem; padding:10px; background:#e3f2fd; border-radius:4px;">
-        💡 系統會根據您 <b>81 宮格核心圈</b> 的需求，自動搜尋全分會夥伴的人脈庫。
+        💡 系統會根據您 <b>81 宮格核心圈 (中間那格)</b> 的需求，自動搜尋全分會夥伴的人脈庫。
     </div>
     <div id="match-results"></div>
 </div>
@@ -206,14 +212,20 @@
 <div class="modal-overlay" id="logModal">
     <div class="modal">
         <h3 id="modalTitle">新增面談紀錄</h3>
-        <div class="row">
-            <label>日期與時間</label>
-            <input type="datetime-local" id="logDate">
+        <div id="logHistoryContainer">
+            <div style="text-align:center; padding:20px; color:#999;">無紀錄</div>
         </div>
-        <textarea id="logContent" rows="4" placeholder="請輸入面談內容或備註..."></textarea>
-        <div style="margin-top:20px; text-align:right;">
-            <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px;" onclick="closeLogModal()">取消</button>
-            <button class="btn-sm" style="background:var(--primary-color); color:white;" onclick="saveLog()">儲存</button>
+        
+        <div style="border-top:2px solid #eee; padding-top:10px;">
+            <div class="row">
+                <label style="font-size:0.85rem; font-weight:bold;">新增紀錄：</label>
+                <input type="datetime-local" id="logDate">
+            </div>
+            <textarea id="logContent" rows="3" placeholder="請輸入面談內容或備註..."></textarea>
+            <div style="margin-top:15px; text-align:right;">
+                <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px;" onclick="closeLogModal()">關閉</button>
+                <button class="btn-sm" style="background:var(--primary-color); color:white;" onclick="saveLog()">儲存</button>
+            </div>
         </div>
     </div>
 </div>
@@ -234,19 +246,14 @@
         document.getElementById('mobile-hint').style.display = 'block';
     }
 
-    // --- 🔥 關鍵修復：嚴格的空白過濾 ---
+    // --- Helper: 安全設定 Select ---
     function safelySetSelectValue(selectElement, value) {
-        // 如果值不存在、是 null/undefined、或者 trim 之後是空字串 -> 視為無效，跳過
         if (!value || typeof value !== 'string' || value.trim() === "") {
-            selectElement.value = ""; // 強制選到空選項
+            selectElement.value = "";
             return;
         }
-        
-        // 檢查選單裡有沒有這個值
         let exists = Array.from(selectElement.options).some(opt => opt.value === value);
-        
         if (!exists) {
-            // 如果真的有內容（不是空白），但不在清單內，才加 (舊)
             let opt = document.createElement('option');
             opt.value = value;
             opt.innerText = `${value} (舊)`;
@@ -256,7 +263,7 @@
         selectElement.value = value;
     }
 
-    // --- Load Industries ---
+    // --- 1. 初始化產業資料 ---
     async function loadIndustries() {
         let { data, error } = await db.from('industries').select('category, name').order('category').order('name');
         
@@ -276,7 +283,7 @@
         initCRMCategorySelect();
     }
 
-    // 1. Grid HTML (Optgroups)
+    // 更新 Grid 的 Select 選項
     function updateGridSelectsHTML() {
         let html = `<option value="">(空)</option>`;
         for (const [cat, items] of Object.entries(industryMap)) {
@@ -290,15 +297,13 @@
 
         document.querySelectorAll('.grid-select').forEach(sel => {
             let currentVal = sel.value;
-            // 如果當前選到的是空白或無效值，不要傳進去，以免被當成 legacy
             let valToSet = (!currentVal || currentVal.trim() === "") ? "" : currentVal;
-            
             sel.innerHTML = html;
             safelySetSelectValue(sel, valToSet);
         });
     }
 
-    // 2. CRM Selects
+    // 初始化 CRM 的大分類
     function initCRMCategorySelect() {
         const catSelect = document.getElementById('cCategory');
         let html = `<option value="" disabled selected>1. 選擇大分類</option>`;
@@ -309,6 +314,7 @@
         document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
     }
 
+    // CRM 連動選單
     function updateSubIndustrySelect() {
         const cat = document.getElementById('cCategory').value;
         const subSelect = document.getElementById('cIndustry');
@@ -324,7 +330,7 @@
         subSelect.innerHTML = html;
     }
 
-    // --- Handle New Item ---
+    // --- 新增產業邏輯 ---
     async function handleNewIndustry(name, category = "未分類") {
         if (!name) return null;
         name = name.trim();
@@ -348,23 +354,32 @@
         return name;
     }
 
+    // --- Grid 操作 ---
+    // 定義中心格對應外圍格的 Map
+    // g4-c0 (中心網格的左上角) -> g0-c4 (左上網格的中心點)
+    const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
+
     async function onGridSelectChange(selectEl) {
+        let valToSave = selectEl.value;
+
+        // 處理新增
         if(selectEl.value === 'ADD_NEW') {
             let newName = prompt("請輸入新產業名稱 (將存入「其他服務」分類)：");
             if (newName && newName.trim() !== "") {
                 let savedName = await handleNewIndustry(newName, "🏭 其他服務");
+                valToSave = savedName;
                 selectEl.value = savedName;
-                let id = selectEl.dataset.id;
-                saveCell(id, savedName);
             } else {
                 selectEl.value = "";
+                return; // 取消
             }
-        } else {
-            let id = selectEl.dataset.id;
-            saveCell(id, selectEl.value);
         }
-    }
 
+        let id = selectEl.dataset.id;
+        await saveCell(id, valToSave);
+    }
+    
+    // CRM 下拉變更
     async function onCRMSelectChange() {
         const subSelect = document.getElementById('cIndustry');
         if (subSelect.value === 'ADD_NEW_CRM') {
@@ -378,10 +393,9 @@
             }
         }
     }
-    
     document.getElementById('cIndustry').addEventListener('change', onCRMSelectChange);
 
-    // --- Standard Logic ---
+    // --- 登入系統 ---
     async function login() {
         const name = document.getElementById('loginName').value.trim();
         const pwd = document.getElementById('loginPwd').value.trim();
@@ -402,13 +416,12 @@
         setTimeout(() => document.getElementById('identity-overlay').style.display = 'none', 500);
 
         if(member.role === 'admin') {
-            document.getElementById('adminTabBtn').style.display = 'block';
-            loadMembers();
+            document.getElementById('adminTabBtn').style.display = 'inline-block';
         }
 
         renderGridStructure();  
-        await loadIndustries(); 
-        await loadGrid();       
+        await loadIndustries(); // 先載入產業
+        await loadGrid();       // 再填入使用者的選擇
         await loadContacts();   
         
         document.getElementById('loading').style.display = 'none';
@@ -416,7 +429,7 @@
 
     function logout() { location.reload(); }
 
-    // Admin
+    // --- Admin ---
     async function loadMembers() {
         if(currentMember.role !== 'admin') return;
         const { data } = await db.from('members').select('*').order('created_at', {ascending: true});
@@ -457,7 +470,7 @@
         loadMembers();
     }
 
-    // Grid
+    // --- Grid Core ---
     function renderGridStructure() {
         const el = document.getElementById('mandala');
         if(el.innerHTML) return; 
@@ -466,7 +479,7 @@
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
                 let cell = document.createElement('div'); 
-                let isM = (g===4 && c===4), isC = (c===4);
+                let isM = (g===4 && c===4), isC = (c===4); // isM: 絕對中心, isC: 每個九宮格的中心
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
                 
                 let select = document.createElement('select');
@@ -475,6 +488,7 @@
                 select.dataset.id = id;
                 select.innerHTML = '<option>...</option>'; 
 
+                // 如果不是中央九宮格(g4)，但卻是該九宮格的中心(c4)，則禁止編輯(因為要連動)
                 if(g!==4 && c===4) select.disabled = true; 
 
                 select.onchange = (e) => onGridSelectChange(e.target);
@@ -495,17 +509,38 @@
                 if(el) safelySetSelectValue(el, item.content);
             });
         }
-        syncGridVisuals();
+        // 確保載入後畫面是同步的
+        syncGridVisualsOnly();
     }
 
+    // 儲存邏輯 (關鍵修復：同時存外圍)
     async function saveCell(index, content) {
+        // 1. 更新本地資料與資料庫 (當前格子)
         gridData[index] = content;
-        if(index.startsWith('g4-')) { syncGridVisuals(); }
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: index, content: content }, { onConflict: 'member_id, grid_index' });
+
+        // 2. 檢查是否為中心九宮格 (g4) 的修改
+        if(index.startsWith('g4-')) {
+            let col = parseInt(index.split('c')[1]); // 取得它是中心九宮格的第幾格 (0~8)
+            
+            // 如果修改的不是絕對中心(c4)，則需要連動外圍
+            if (col !== 4) {
+                let outerGridId = mapCenterToOuter[col]; // 找到對應的外圍大格 ID
+                let targetId = `g${outerGridId}-c4`; // 該大格的中心位置
+                
+                // 更新畫面
+                let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
+                if(el) safelySetSelectValue(el, content);
+                
+                // 【關鍵修復】: 也要把這個外圍格子存入資料庫！
+                gridData[targetId] = content;
+                await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: targetId, content: content }, { onConflict: 'member_id, grid_index' });
+            }
+        }
     }
     
-    const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
-    function syncGridVisuals() {
+    // 純視覺同步 (用於載入時)
+    function syncGridVisualsOnly() {
         for(let i=0; i<9; i++) {
             if(i === 4) continue; 
             let centerVal = gridData[`g4-c${i}`] || '';
@@ -515,13 +550,15 @@
         }
     }
 
-    // Match
+    // --- Match Logic ---
     async function loadMatches() {
         const resDiv = document.getElementById('match-results');
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
 
         myNeeds = [];
+        // 抓取中間九宮格的需求 (g4-c0 ~ g4-c8)
         for(let i=0; i<9; i++) {
+            if (i === 4) continue; // 自己不用媒合自己
             let val = gridData[`g4-c${i}`];
             if(val && val.trim() !== '') myNeeds.push(val);
         }
@@ -532,16 +569,18 @@
         }
 
         let html = '';
-        let foundAny = false;
+        let foundCount = 0;
 
         for (let need of myNeeds) {
+            // 搜尋所有聯絡人 (user_contacts)
+            // 注意：這裡還是字串完全比對，未來建議改為 ID 關聯
             const { data } = await db.from('user_contacts')
                 .select('*')
-                .neq('member_id', currentMember.id)
+                .neq('member_id', currentMember.id) // 不要搜到自己的
                 .eq('industry', need); 
 
             if(data && data.length > 0) {
-                foundAny = true;
+                foundCount += data.length;
                 data.forEach(c => {
                     let isSweet = (c.trust_level === 'A' || c.trust_level === 'B');
                     html += `
@@ -561,10 +600,10 @@
                 });
             }
         }
-        resDiv.innerHTML = foundAny ? html : '<div style="text-align:center; padding:20px; color:#666;">尚未找到符合您需求的資源。</div>';
+        resDiv.innerHTML = foundCount > 0 ? html : '<div style="text-align:center; padding:20px; color:#666;">尚未找到符合您需求的資源。<br>建議邀請夥伴加入並填寫資料。</div>';
     }
 
-    // CRM
+    // --- CRM Logic ---
     async function loadContacts() {
         const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id).order('created_at', { ascending: false });
         myContacts = data || []; 
@@ -583,7 +622,7 @@
                 <tr>
                     <td><span class="tag ${strategy.class}">${strategy.text}</span></td>
                     <td><b>${c.name}</b><br><small style="color:#666">${c.industry}</small></td>
-                    <td><button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index}, -1)">${logBtnText}</button></td>
+                    <td><button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index})">${logBtnText}</button></td>
                     <td><button onclick="delContact('${c.id}')" style="color:#f44336;border:none;background:none;cursor:pointer">✕</button></td>
                 </tr>`;
         });
@@ -609,8 +648,7 @@
         });
         if(!error) {
             document.getElementById('cName').value = ''; 
-            document.getElementById('cCategory').value = "";
-            document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
+            // 保留分類選擇，方便連續輸入
             await loadContacts();
         }
         document.getElementById('loading').style.display = 'none';
@@ -622,60 +660,117 @@
         await loadContacts();
     }
 
-    // Logs
-    let editingContactIdx = -1, editingLogIdx = -1;
-    function openLogModal(cIdx, lIdx) {
-        editingContactIdx = cIdx; editingLogIdx = lIdx;
-        const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        let contact = myContacts[cIdx];
-        let contentHtml = '';
-        if(contact.logs && contact.logs.length > 0) {
-            contact.logs.forEach((l, idx) => {
-                contentHtml += `<div class="log-entry"><span class="log-date">${l.date} <button class="btn-sm" style="float:right; color:red; padding:0;" onclick="deleteLog(${cIdx}, ${idx})">✕</button></span><div class="log-content">${l.content}</div></div>`;
-            });
-            contentHtml += `<hr style="margin:15px 0; border:0; border-top:1px solid #eee;">`;
-        }
-        let modalBody = document.querySelector('.modal');
-        let historyDiv = document.getElementById('logHistory');
-        if(!historyDiv) {
-            historyDiv = document.createElement('div'); historyDiv.id = 'logHistory';
-            historyDiv.style.maxHeight = '150px'; historyDiv.style.overflowY = 'auto'; historyDiv.style.marginBottom = '10px';
-            modalBody.insertBefore(historyDiv, document.getElementById('modalTitle').nextSibling);
-        }
-        historyDiv.innerHTML = contentHtml;
+    // --- Logs Modal Logic (UI Fix) ---
+    let editingContactIdx = -1;
+
+    function openLogModal(cIdx) {
+        editingContactIdx = cIdx;
+        const contact = myContacts[cIdx];
+        
+        // 標題
         document.getElementById('modalTitle').innerText = `面談紀錄：${contact.name}`;
+        
+        // 時間預設現在
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('logDate').value = now.toISOString().slice(0, 16);
-        document.getElementById('logContent').value = ''; 
+        document.getElementById('logContent').value = '';
+
+        // 渲染歷史紀錄
+        const container = document.getElementById('logHistoryContainer');
+        if(contact.logs && contact.logs.length > 0) {
+            let html = '';
+            contact.logs.forEach((l, idx) => {
+                html += `
+                    <div class="log-entry">
+                        <span class="log-date">
+                            ${l.date} 
+                            <span style="cursor:pointer; color:red;" onclick="deleteLog(${cIdx}, ${idx})">✕ 刪除</span>
+                        </span>
+                        <div style="margin-top:4px; color:#333;">${l.content}</div>
+                    </div>`;
+            });
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">目前無紀錄</div>';
+        }
+
         document.getElementById('logModal').style.display = 'flex';
     }
-    function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
-    async function saveLog() {
-        if(editingContactIdx === -1) return;
-        let dateVal = document.getElementById('logDate').value.replace('T', ' ');
-        let content = document.getElementById('logContent').value;
-        if(!content) return alert("請輸入內容");
-        let contact = myContacts[editingContactIdx];
-        let logs = contact.logs || [];
-        logs.unshift({ date: dateVal, content: content });
-        document.getElementById('loading').style.display = 'block';
-        const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        if(error) alert("儲存失敗"); else { closeLogModal(); loadContacts(); }
-        document.getElementById('loading').style.display = 'none';
-    }
-    async function deleteLog(cIdx, lIdx) {
-        if(!confirm("刪除紀錄？")) return;
-        let contact = myContacts[cIdx]; let logs = contact.logs; logs.splice(lIdx, 1);
-        const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        if(!error) { openLogModal(cIdx, -1); loadContacts(); }
+
+    function closeLogModal() { 
+        document.getElementById('logModal').style.display = 'none'; 
     }
 
+    async function saveLog() {
+        if(editingContactIdx === -1) return;
+        
+        let dateVal = document.getElementById('logDate').value.replace('T', ' ');
+        let content = document.getElementById('logContent').value;
+        
+        if(!content) return alert("請輸入內容");
+        
+        let contact = myContacts[editingContactIdx];
+        let logs = contact.logs || [];
+        
+        // 新紀錄插在最前面
+        logs.unshift({ date: dateVal, content: content });
+        
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
+        
+        if(error) {
+            alert("儲存失敗");
+        } else {
+            // 更新本地資料
+            contact.logs = logs; 
+            // 重新渲染 Modal 內的歷史紀錄，不用關閉視窗，體驗較好
+            openLogModal(editingContactIdx);
+            // 同時更新背後的列表按鈕文字
+            renderContactList();
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function deleteLog(cIdx, lIdx) {
+        if(!confirm("確定刪除這條紀錄？")) return;
+        
+        let contact = myContacts[cIdx];
+        let logs = contact.logs;
+        logs.splice(lIdx, 1); // 移除該條
+        
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
+        
+        if(!error) {
+            openLogModal(cIdx); // 重新渲染 Modal
+            renderContactList(); // 更新列表
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    // --- Tab Switch ---
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
-        else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
-        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
-        else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); }
+        if(t==='grid') { 
+            document.getElementById('grid-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[0].classList.add('active'); 
+        }
+        else if(t==='matches') { 
+            document.getElementById('matches-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[1].classList.add('active'); 
+            loadMatches(); 
+        }
+        else if(t==='crm') { 
+            document.getElementById('crm-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[2].classList.add('active'); 
+        }
+        else if(t==='admin') { 
+            document.getElementById('admin-view').classList.add('active'); 
+            document.getElementById('adminTabBtn').classList.add('active'); 
+            loadMembers();
+        }
     }
 </script>
 </body>
