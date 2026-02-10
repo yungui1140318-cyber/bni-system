@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (辯論修正版)</title>
+    <title>雲貴人脈系統 (完美分類版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -104,7 +104,6 @@
 <body>
 
 <script>
-    // 注意：請確保你的 Supabase RLS 規則設定正確，否則 Anon Key 可能會有權限問題
     const SUPABASE_URL = 'https://htlywcaudjfnneaoikgz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHl3Y2F1ZGpmbm5lYW9pa2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MjExOTIsImV4cCI6MjA4NjI5NzE5Mn0.h5lO8qbOBaQD1vqNwyFmLAGjut6afZN4mDrgmPoxCUg';
 </script>
@@ -215,7 +214,6 @@
         <div id="logHistoryContainer">
             <div style="text-align:center; padding:20px; color:#999;">無紀錄</div>
         </div>
-        
         <div style="border-top:2px solid #eee; padding-top:10px;">
             <div class="row">
                 <label style="font-size:0.85rem; font-weight:bold;">新增紀錄：</label>
@@ -226,6 +224,30 @@
                 <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px;" onclick="closeLogModal()">關閉</button>
                 <button class="btn-sm" style="background:var(--primary-color); color:white;" onclick="saveLog()">儲存</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="addIndModal">
+    <div class="modal" style="max-width:320px;">
+        <h3>➕ 新增專業項目</h3>
+        <p style="font-size:0.9rem; color:#666;">請先選擇大分類，再輸入項目名稱。</p>
+        
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 所屬分類：</label>
+            <select id="newIndCat" style="width:100%; box-sizing:border-box;">
+                <option value="" disabled selected>請選擇...</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom:10px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 項目名稱：</label>
+            <input id="newIndNameInput" style="width:100%; box-sizing:border-box;" placeholder="例如：冷凍空調">
+        </div>
+
+        <div style="text-align:right; margin-top:15px;">
+            <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px;" onclick="closeAddIndModal()">取消</button>
+            <button class="btn-sm" style="background:var(--primary-color); color:white;" onclick="confirmAddIndustry()">確認新增</button>
         </div>
     </div>
 </div>
@@ -241,6 +263,7 @@
     
     let industryMap = {}; 
     let allIndustriesFlat = []; 
+    let currentEditingSelect = null; // 紀錄目前正在編輯的下拉選單
 
     if(window.innerWidth < 768) {
         document.getElementById('mobile-hint').style.display = 'block';
@@ -252,6 +275,12 @@
             selectElement.value = "";
             return;
         }
+        // 如果值是 "(空)" 或 "..." 這種舊資料，強制轉為空白
+        if (value === "(空)" || value === "...") {
+            selectElement.value = "";
+            return;
+        }
+
         let exists = Array.from(selectElement.options).some(opt => opt.value === value);
         if (!exists) {
             let opt = document.createElement('option');
@@ -281,11 +310,13 @@
 
         updateGridSelectsHTML();
         initCRMCategorySelect();
+        initAddIndModalSelect(); // 初始化新增視窗的分類
     }
 
-    // 更新 Grid 的 Select 選項
+    // 更新 Grid 的 Select 選項 (預設為空白)
     function updateGridSelectsHTML() {
-        let html = `<option value="">(空)</option>`;
+        // 第一個選項是真正的空白，不顯示文字
+        let html = `<option value=""></option>`;
         for (const [cat, items] of Object.entries(industryMap)) {
             html += `<optgroup label="${cat}">`;
             items.forEach(item => {
@@ -313,6 +344,16 @@
         catSelect.innerHTML = html;
         document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
     }
+    
+    // 初始化「新增產業視窗」的大分類
+    function initAddIndModalSelect() {
+        const modalSelect = document.getElementById('newIndCat');
+        let html = `<option value="" disabled selected>請選擇...</option>`;
+        for (const cat of Object.keys(industryMap)) {
+            html += `<option value="${cat}">${cat}</option>`;
+        }
+        modalSelect.innerHTML = html;
+    }
 
     // CRM 連動選單
     function updateSubIndustrySelect() {
@@ -330,8 +371,8 @@
         subSelect.innerHTML = html;
     }
 
-    // --- 新增產業邏輯 ---
-    async function handleNewIndustry(name, category = "未分類") {
+    // --- 新增產業邏輯 (改寫為接收分類) ---
+    async function handleNewIndustry(name, category) {
         if (!name) return null;
         name = name.trim();
         if(name === "") return null;
@@ -348,6 +389,10 @@
         allIndustriesFlat.push(name);
         
         updateGridSelectsHTML();
+        initCRMCategorySelect(); 
+        initAddIndModalSelect();
+        
+        // 如果目前 CRM 正好選到該分類，更新它
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
 
@@ -355,36 +400,67 @@
     }
 
     // --- Grid 操作 ---
-    // 定義中心格對應外圍格的 Map
-    // g4-c0 (中心網格的左上角) -> g0-c4 (左上網格的中心點)
     const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
 
     async function onGridSelectChange(selectEl) {
-        let valToSave = selectEl.value;
-
-        // 處理新增
+        // 如果選到「新增」，開啟 Modal
         if(selectEl.value === 'ADD_NEW') {
-            let newName = prompt("請輸入新產業名稱 (將存入「其他服務」分類)：");
-            if (newName && newName.trim() !== "") {
-                let savedName = await handleNewIndustry(newName, "🏭 其他服務");
-                valToSave = savedName;
-                selectEl.value = savedName;
-            } else {
-                selectEl.value = "";
-                return; // 取消
-            }
+            currentEditingSelect = selectEl;
+            openAddIndModal(); // 開啟視窗，不直接 prompt
+        } else {
+            let id = selectEl.dataset.id;
+            await saveCell(id, selectEl.value);
         }
-
-        let id = selectEl.dataset.id;
-        await saveCell(id, valToSave);
     }
     
-    // CRM 下拉變更
+    // --- 新增產業 Modal 相關 ---
+    function openAddIndModal() {
+        document.getElementById('newIndCat').value = "";
+        document.getElementById('newIndNameInput').value = "";
+        document.getElementById('addIndModal').style.display = 'flex';
+    }
+
+    function closeAddIndModal() {
+        document.getElementById('addIndModal').style.display = 'none';
+        // 如果取消了，把選單轉回空白 (或原本的值，這裡簡化為空白)
+        if (currentEditingSelect && currentEditingSelect.value === 'ADD_NEW') {
+             // 嘗試讀取資料庫舊值，若無則空
+             let id = currentEditingSelect.dataset.id;
+             let oldVal = gridData[id] || "";
+             safelySetSelectValue(currentEditingSelect, oldVal);
+        }
+        currentEditingSelect = null;
+    }
+
+    async function confirmAddIndustry() {
+        const cat = document.getElementById('newIndCat').value;
+        const name = document.getElementById('newIndNameInput').value;
+
+        if (!cat) return alert("請選擇大分類！");
+        if (!name || name.trim() === "") return alert("請輸入項目名稱！");
+
+        document.getElementById('loading').style.display = 'block';
+        let savedName = await handleNewIndustry(name, cat);
+        document.getElementById('loading').style.display = 'none';
+
+        if (savedName) {
+            // 新增成功，填入原本觸發的選單
+            if (currentEditingSelect) {
+                safelySetSelectValue(currentEditingSelect, savedName);
+                let id = currentEditingSelect.dataset.id;
+                await saveCell(id, savedName);
+            }
+            document.getElementById('addIndModal').style.display = 'none';
+        }
+    }
+    
+    // --- CRM 頁面的新增 ---
     async function onCRMSelectChange() {
         const subSelect = document.getElementById('cIndustry');
         if (subSelect.value === 'ADD_NEW_CRM') {
-            const cat = document.getElementById('cCategory').value;
-            let newName = prompt(`請輸入要新增到「${cat}」的產業名稱：`);
+            const cat = document.getElementById('cCategory').value; // CRM 已經選好分類了
+            let newName = prompt(`您正在新增【${cat}】類別下的項目，請輸入名稱：`);
+            
             if (newName && newName.trim() !== "") {
                 let savedName = await handleNewIndustry(newName, cat);
                 subSelect.value = savedName;
@@ -486,9 +562,9 @@
                 select.className = 'grid-select';
                 let id = `g${g}-c${c}`;
                 select.dataset.id = id;
-                select.innerHTML = '<option>...</option>'; 
+                // 預設空白
+                select.innerHTML = '<option value=""></option>'; 
 
-                // 如果不是中央九宮格(g4)，但卻是該九宮格的中心(c4)，則禁止編輯(因為要連動)
                 if(g!==4 && c===4) select.disabled = true; 
 
                 select.onchange = (e) => onGridSelectChange(e.target);
@@ -509,37 +585,29 @@
                 if(el) safelySetSelectValue(el, item.content);
             });
         }
-        // 確保載入後畫面是同步的
         syncGridVisualsOnly();
     }
 
-    // 儲存邏輯 (關鍵修復：同時存外圍)
+    // 儲存邏輯
     async function saveCell(index, content) {
-        // 1. 更新本地資料與資料庫 (當前格子)
         gridData[index] = content;
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: index, content: content }, { onConflict: 'member_id, grid_index' });
 
-        // 2. 檢查是否為中心九宮格 (g4) 的修改
         if(index.startsWith('g4-')) {
-            let col = parseInt(index.split('c')[1]); // 取得它是中心九宮格的第幾格 (0~8)
-            
-            // 如果修改的不是絕對中心(c4)，則需要連動外圍
+            let col = parseInt(index.split('c')[1]); 
             if (col !== 4) {
-                let outerGridId = mapCenterToOuter[col]; // 找到對應的外圍大格 ID
-                let targetId = `g${outerGridId}-c4`; // 該大格的中心位置
+                let outerGridId = mapCenterToOuter[col];
+                let targetId = `g${outerGridId}-c4`;
                 
-                // 更新畫面
                 let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
                 if(el) safelySetSelectValue(el, content);
                 
-                // 【關鍵修復】: 也要把這個外圍格子存入資料庫！
                 gridData[targetId] = content;
                 await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: targetId, content: content }, { onConflict: 'member_id, grid_index' });
             }
         }
     }
     
-    // 純視覺同步 (用於載入時)
     function syncGridVisualsOnly() {
         for(let i=0; i<9; i++) {
             if(i === 4) continue; 
@@ -556,9 +624,8 @@
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
 
         myNeeds = [];
-        // 抓取中間九宮格的需求 (g4-c0 ~ g4-c8)
         for(let i=0; i<9; i++) {
-            if (i === 4) continue; // 自己不用媒合自己
+            if (i === 4) continue; 
             let val = gridData[`g4-c${i}`];
             if(val && val.trim() !== '') myNeeds.push(val);
         }
@@ -572,11 +639,9 @@
         let foundCount = 0;
 
         for (let need of myNeeds) {
-            // 搜尋所有聯絡人 (user_contacts)
-            // 注意：這裡還是字串完全比對，未來建議改為 ID 關聯
             const { data } = await db.from('user_contacts')
                 .select('*')
-                .neq('member_id', currentMember.id) // 不要搜到自己的
+                .neq('member_id', currentMember.id) 
                 .eq('industry', need); 
 
             if(data && data.length > 0) {
@@ -648,7 +713,6 @@
         });
         if(!error) {
             document.getElementById('cName').value = ''; 
-            // 保留分類選擇，方便連續輸入
             await loadContacts();
         }
         document.getElementById('loading').style.display = 'none';
@@ -660,23 +724,19 @@
         await loadContacts();
     }
 
-    // --- Logs Modal Logic (UI Fix) ---
+    // --- Logs Modal Logic ---
     let editingContactIdx = -1;
 
     function openLogModal(cIdx) {
         editingContactIdx = cIdx;
         const contact = myContacts[cIdx];
-        
-        // 標題
         document.getElementById('modalTitle').innerText = `面談紀錄：${contact.name}`;
         
-        // 時間預設現在
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('logDate').value = now.toISOString().slice(0, 16);
         document.getElementById('logContent').value = '';
 
-        // 渲染歷史紀錄
         const container = document.getElementById('logHistoryContainer');
         if(contact.logs && contact.logs.length > 0) {
             let html = '';
@@ -694,58 +754,38 @@
         } else {
             container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">目前無紀錄</div>';
         }
-
         document.getElementById('logModal').style.display = 'flex';
     }
 
-    function closeLogModal() { 
-        document.getElementById('logModal').style.display = 'none'; 
-    }
+    function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
 
     async function saveLog() {
         if(editingContactIdx === -1) return;
-        
         let dateVal = document.getElementById('logDate').value.replace('T', ' ');
         let content = document.getElementById('logContent').value;
-        
         if(!content) return alert("請輸入內容");
         
         let contact = myContacts[editingContactIdx];
         let logs = contact.logs || [];
-        
-        // 新紀錄插在最前面
         logs.unshift({ date: dateVal, content: content });
         
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
         
-        if(error) {
-            alert("儲存失敗");
-        } else {
-            // 更新本地資料
-            contact.logs = logs; 
-            // 重新渲染 Modal 內的歷史紀錄，不用關閉視窗，體驗較好
-            openLogModal(editingContactIdx);
-            // 同時更新背後的列表按鈕文字
-            renderContactList();
-        }
+        if(error) { alert("儲存失敗"); } 
+        else { contact.logs = logs; openLogModal(editingContactIdx); renderContactList(); }
         document.getElementById('loading').style.display = 'none';
     }
 
     async function deleteLog(cIdx, lIdx) {
         if(!confirm("確定刪除這條紀錄？")) return;
-        
         let contact = myContacts[cIdx];
         let logs = contact.logs;
-        logs.splice(lIdx, 1); // 移除該條
+        logs.splice(lIdx, 1);
         
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        
-        if(!error) {
-            openLogModal(cIdx); // 重新渲染 Modal
-            renderContactList(); // 更新列表
-        }
+        if(!error) { openLogModal(cIdx); renderContactList(); }
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -753,24 +793,10 @@
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if(t==='grid') { 
-            document.getElementById('grid-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[0].classList.add('active'); 
-        }
-        else if(t==='matches') { 
-            document.getElementById('matches-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[1].classList.add('active'); 
-            loadMatches(); 
-        }
-        else if(t==='crm') { 
-            document.getElementById('crm-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[2].classList.add('active'); 
-        }
-        else if(t==='admin') { 
-            document.getElementById('admin-view').classList.add('active'); 
-            document.getElementById('adminTabBtn').classList.add('active'); 
-            loadMembers();
-        }
+        if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
+        else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
+        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
+        else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); loadMembers(); }
     }
 </script>
 </body>
