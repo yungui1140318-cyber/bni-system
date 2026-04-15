@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (完美分類即時更新版)</title>
+    <title>雲貴人脈系統 (最終版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -386,14 +386,22 @@
     }
 
     // 後台新增選單 - 選到「新增大分類」
-    function onAdminAddCatChange() {
+    async function onAdminAddCatChange() {
         let sel = document.getElementById('newAdminCat');
         if (sel.value === 'ADD_NEW_CAT') {
             let newCat = prompt("請輸入新的「大分類」名稱：");
             if (newCat && newCat.trim() !== "") {
                 newCat = newCat.trim();
-                if (!industryMap[newCat]) industryMap[newCat] = [];
-                updateAdminCatSelect();
+                if (!industryMap[newCat]) {
+                    document.getElementById('loading').style.display = 'block';
+                    await db.from('industries').insert({ name: "", category: newCat });
+                    industryMap[newCat] = [];
+                    updateAdminCatSelect();
+                    loadAdminIndustries(); // 刷新後台列表
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    alert("此大分類已存在！");
+                }
                 sel.value = newCat;
             } else {
                 sel.value = "";
@@ -402,14 +410,22 @@
     }
 
     // 後台編輯視窗 - 選到「新增大分類」
-    function onAdminEditCatChange() {
+    async function onAdminEditCatChange() {
         let sel = document.getElementById('adminEditCat');
         if (sel.value === 'ADD_NEW_CAT') {
             let newCat = prompt("請輸入新的「大分類」名稱：");
             if (newCat && newCat.trim() !== "") {
                 newCat = newCat.trim();
-                if (!industryMap[newCat]) industryMap[newCat] = [];
-                updateAdminCatSelect();
+                if (!industryMap[newCat]) {
+                    document.getElementById('loading').style.display = 'block';
+                    await db.from('industries').insert({ name: "", category: newCat });
+                    industryMap[newCat] = [];
+                    updateAdminCatSelect();
+                    loadAdminIndustries(); // 刷新後台列表
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    alert("此大分類已存在！");
+                }
                 sel.value = newCat;
             } else {
                 sel.value = ""; 
@@ -467,9 +483,15 @@
             if (newCat && newCat.trim() !== "") {
                 newCat = newCat.trim();
                 if (!industryMap[newCat]) {
+                    document.getElementById('loading').style.display = 'block';
+                    // 直接寫入資料庫，建立無細項的大分類
+                    await db.from('industries').insert({ name: "", category: newCat });
                     industryMap[newCat] = [];
                     initCRMCategorySelect();
                     updateAdminCatSelect();
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    alert("此大分類已存在！");
                 }
                 catSelect.value = newCat;
                 updateSubIndustrySelect();
@@ -587,13 +609,20 @@
             if (newCat && newCat.trim() !== "") {
                 newCat = newCat.trim();
                 if (!industryMap[newCat]) {
+                    document.getElementById('loading').style.display = 'block';
+                    // 直接寫入資料庫，建立無細項的大分類
+                    await db.from('industries').insert({ name: "", category: newCat });
                     industryMap[newCat] = [];
+                    
                     let html = `<option value="" disabled selected>請選擇大分類...</option>`;
                     for (const c of Object.keys(industryMap)) {
                         html += `<option value="${c}">${c}</option>`;
                     }
                     html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
                     catSelect.innerHTML = html;
+                    document.getElementById('loading').style.display = 'none';
+                } else {
+                    alert("此大分類已存在！");
                 }
                 catSelect.value = newCat;
                 updateGridEditSubSelect();
@@ -1008,7 +1037,7 @@
     async function addContact() {
         const name = document.getElementById('cName').value;
         const ind = document.getElementById('cIndustry').value; 
-        if(!name || !ind || ind.startsWith('ADD_NEW') || ind === "") return alert("請填寫完整資訊");
+        if(!name || !ind || ind.startsWith('ADD_NEW') || ind === "") return alert("請填寫完整資訊，並確保已選擇產業細項");
         
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').insert({
