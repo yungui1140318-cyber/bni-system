@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (完美分類版)</title>
+    <title>雲貴人脈系統 (完美分類即時版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -343,16 +343,51 @@
         initCRMCategorySelect();
     }
 
-    // 初始化 CRM 的大分類 (加入新增大分類功能)
+    // --- 初始化即時推播 (Realtime) ---
+    function setupRealtime() {
+        db.channel('public:industries')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'industries' }, async (payload) => {
+              console.log('偵測到產業資料變動，背景自動更新中...');
+              
+              // 記錄目前編輯視窗的狀態 (避免更新時清空使用者正在選擇的選項)
+              const modalCat = document.getElementById('gridEditCat') ? document.getElementById('gridEditCat').value : null;
+              const modalInd = document.getElementById('gridEditInd') ? document.getElementById('gridEditInd').value : null;
+              
+              await loadIndustries();
+              
+              // 如果使用者在後台，順便更新後台列表
+              if (document.getElementById('admin-view').classList.contains('active')) {
+                  loadAdminIndustries();
+              }
+              
+              // 如果編輯視窗開著，試著還原使用者的選項
+              if (document.getElementById('gridEditModal').style.display === 'flex') {
+                  if (modalCat && modalCat !== 'ADD_NEW_CAT') document.getElementById('gridEditCat').value = modalCat;
+                  updateGridEditSubSelect();
+                  if (modalInd && modalInd !== 'ADD_NEW_IND') document.getElementById('gridEditInd').value = modalInd;
+              }
+          })
+          .subscribe();
+    }
+
+    // 初始化 CRM 的大分類 (加入新增大分類功能，並保留當前選項)
     function initCRMCategorySelect() {
         const catSelect = document.getElementById('cCategory');
+        const currentCat = catSelect.value; // 保存目前的選擇，避免 Realtime 更新時被洗掉
+
         let html = `<option value="" disabled selected>1. 選擇大分類</option>`;
         for (const cat of Object.keys(industryMap)) {
             html += `<option value="${cat}">${cat}</option>`;
         }
         html += `<option value="ADD_NEW_CRM_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
         catSelect.innerHTML = html;
-        document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
+
+        // 如果原本有選擇，且該選擇依然存在，就還原它
+        if (currentCat && industryMap[currentCat]) {
+            catSelect.value = currentCat;
+        }
+        
+        updateSubIndustrySelect(true); // 帶入 true 表示這是背景更新，嘗試保留細項
     }
 
     // CRM 大分類連動事件
@@ -378,9 +413,11 @@
     }
 
     // CRM 連動細項選單
-    function updateSubIndustrySelect() {
+    function updateSubIndustrySelect(isBackgroundUpdate = false) {
         const cat = document.getElementById('cCategory').value;
         const subSelect = document.getElementById('cIndustry');
+        const currentSub = subSelect.value; // 保存當前選擇
+
         if (!cat || !industryMap[cat] || cat === "ADD_NEW_CRM_CAT") {
             subSelect.innerHTML = `<option value="" disabled selected>無資料</option>`;
             return;
@@ -391,6 +428,10 @@
         });
         html += `<option value="ADD_NEW_CRM" style="color:var(--primary-color); font-weight:bold;">➕ 新增至此分類...</option>`;
         subSelect.innerHTML = html;
+
+        if (isBackgroundUpdate && currentSub && industryMap[cat].includes(currentSub)) {
+            subSelect.value = currentSub;
+        }
     }
 
     // --- 共用：新增產業邏輯 ---
@@ -405,21 +446,20 @@
             return name; 
         }
 
+        // 新增進資料庫，Realtime 會自動觸發 loadIndustries() 同步全站
         await db.from('industries').insert({ name: name, category: category });
         
+        // 前端先行手動更新，讓當下操作的人不用等
         if (!industryMap[category]) industryMap[category] = [];
-        industryMap[category].push(name);
-        allIndustriesFlat.push(name);
+        if (!industryMap[category].includes(name)) {
+            industryMap[category].push(name);
+            allIndustriesFlat.push(name);
+        }
         
         initCRMCategorySelect(); 
         
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
-
-        // 若管理員剛好在後台，也順便更新後台列表
-        if (document.getElementById('admin-view').classList.contains('active')) {
-            loadAdminIndustries();
-        }
 
         return name;
     }
@@ -579,12 +619,15 @@
         await loadGrid();       
         await loadContacts();   
         
+        // 登入成功後，開啟即時監聽機制
+        setupRealtime();
+        
         document.getElementById('loading').style.display = 'none';
     }
 
     function logout() { location.reload(); }
 
-    // --- Admin: Members (新增設定管理員功能) ---
+    // --- Admin: Members (設定管理員功能) ---
     async function loadMembers() {
         if(currentMember.role !== 'admin') return;
         const { data } = await db.from('members').select('*').order('created_at', {ascending: true});
@@ -642,7 +685,7 @@
         loadMembers();
     }
 
-    // --- Admin: Industries (新增CRUD與連動更新) ---
+    // --- Admin: Industries (CRUD與連動更新) ---
     async function loadAdminIndustries() {
         if(currentMember.role !== 'admin') return;
         document.getElementById('loading').style.display = 'block';
