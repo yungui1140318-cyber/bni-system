@@ -40,12 +40,13 @@
         
         .grid-select { 
             width: 100%; height: 100%; border: none; outline: none; background: transparent; 
-            text-align: center; text-align-last: center; font-size: 0.8rem; cursor: pointer; 
-            padding: 2px; appearance: auto; -webkit-appearance: listbox; 
+            text-align: center; display: flex; align-items: center; justify-content: center; 
+            font-size: 0.85rem; cursor: pointer; padding: 4px; box-sizing: border-box;
+            word-break: break-all;
         }
+        .grid-select:hover { background: rgba(0,0,0,0.03); }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
-        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.9rem; }
-        .master .grid-select option, .master .grid-select optgroup { color: #333; }
+        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.95rem; }
 
         /* Match Cards */
         .match-card { background: white; border-left: 5px solid #2196f3; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
@@ -96,7 +97,6 @@
             .mandala { grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
             .sub-grid { aspect-ratio: auto; min-height: 180px; }
             .cell { min-height: 50px; }
-            .grid-select { font-size: 14px; padding: 5px 0; }
             .modal { width: 95%; padding: 15px; }
         }
     </style>
@@ -228,26 +228,28 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="addIndModal">
+<div class="modal-overlay" id="gridEditModal">
     <div class="modal" style="max-width:320px;">
-        <h3>➕ 新增專業項目</h3>
-        <p style="font-size:0.9rem; color:#666;">請先選擇大分類，再輸入項目名稱。</p>
+        <h3 style="margin-top:0;">✏️ 編輯產業宮格</h3>
         
-        <div style="margin-bottom:10px;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 所屬分類：</label>
-            <select id="newIndCat" style="width:100%; box-sizing:border-box;">
-                <option value="" disabled selected>請選擇...</option>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 選擇大分類：</label>
+            <select id="gridEditCat" style="width:100%; box-sizing:border-box;" onchange="onGridEditCatChange()">
             </select>
         </div>
-        
-        <div style="margin-bottom:10px;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 項目名稱：</label>
-            <input id="newIndNameInput" style="width:100%; box-sizing:border-box;" placeholder="例如：冷凍空調">
+
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 選擇細項：</label>
+            <select id="gridEditInd" style="width:100%; box-sizing:border-box;" onchange="onGridEditIndChange()">
+            </select>
         </div>
 
-        <div style="text-align:right; margin-top:15px;">
-            <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px;" onclick="closeAddIndModal()">取消</button>
-            <button class="btn-sm" style="background:var(--primary-color); color:white;" onclick="confirmAddIndustry()">確認新增</button>
+        <div style="display: flex; justify-content: space-between; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <button class="btn-sm" style="background:#f44336; color:white; padding: 8px 12px;" onclick="clearGridCell()">🗑️ 清空</button>
+            <div>
+                <button class="btn-sm" style="background:#eee; color:#333; margin-right:5px; padding: 8px 12px;" onclick="closeGridEditModal()">取消</button>
+                <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveGridEdit()">確認儲存</button>
+            </div>
         </div>
     </div>
 </div>
@@ -263,7 +265,6 @@
     
     let industryMap = {}; 
     let allIndustriesFlat = []; 
-    let currentEditingSelect = null; // 紀錄目前正在編輯的下拉選單
 
     if(window.innerWidth < 768) {
         document.getElementById('mobile-hint').style.display = 'block';
@@ -275,7 +276,6 @@
             selectElement.value = "";
             return;
         }
-        // 如果值是 "(空)" 或 "..." 這種舊資料，強制轉為空白
         if (value === "(空)" || value === "...") {
             selectElement.value = "";
             return;
@@ -290,6 +290,15 @@
             selectElement.appendChild(opt);
         }
         selectElement.value = value;
+    }
+
+    // --- 尋找項目所屬大分類 ---
+    function getCategoryOfIndustry(indName) {
+        if (!indName) return "";
+        for (const [cat, items] of Object.entries(industryMap)) {
+            if (items.includes(indName)) return cat;
+        }
+        return "";
     }
 
     // --- 1. 初始化產業資料 ---
@@ -307,31 +316,7 @@
                 allIndustriesFlat.push(row.name);
             });
         }
-
-        updateGridSelectsHTML();
         initCRMCategorySelect();
-        initAddIndModalSelect(); // 初始化新增視窗的分類
-    }
-
-    // 更新 Grid 的 Select 選項 (預設為空白)
-    function updateGridSelectsHTML() {
-        // 第一個選項是真正的空白，不顯示文字
-        let html = `<option value=""></option>`;
-        for (const [cat, items] of Object.entries(industryMap)) {
-            html += `<optgroup label="${cat}">`;
-            items.forEach(item => {
-                html += `<option value="${item}">${item}</option>`;
-            });
-            html += `</optgroup>`;
-        }
-        html += `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增產業...</option>`;
-
-        document.querySelectorAll('.grid-select').forEach(sel => {
-            let currentVal = sel.value;
-            let valToSet = (!currentVal || currentVal.trim() === "") ? "" : currentVal;
-            sel.innerHTML = html;
-            safelySetSelectValue(sel, valToSet);
-        });
     }
 
     // 初始化 CRM 的大分類
@@ -343,16 +328,6 @@
         }
         catSelect.innerHTML = html;
         document.getElementById('cIndustry').innerHTML = `<option value="" disabled selected>請先選大分類</option>`;
-    }
-    
-    // 初始化「新增產業視窗」的大分類
-    function initAddIndModalSelect() {
-        const modalSelect = document.getElementById('newIndCat');
-        let html = `<option value="" disabled selected>請選擇...</option>`;
-        for (const cat of Object.keys(industryMap)) {
-            html += `<option value="${cat}">${cat}</option>`;
-        }
-        modalSelect.innerHTML = html;
     }
 
     // CRM 連動選單
@@ -371,14 +346,14 @@
         subSelect.innerHTML = html;
     }
 
-    // --- 新增產業邏輯 (改寫為接收分類) ---
+    // --- 新增產業邏輯 ---
     async function handleNewIndustry(name, category) {
         if (!name) return null;
         name = name.trim();
         if(name === "") return null;
         
         if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
-            alert("此產業已存在！");
+            alert("此產業細項已存在！");
             return name; 
         }
 
@@ -388,77 +363,139 @@
         industryMap[category].push(name);
         allIndustriesFlat.push(name);
         
-        updateGridSelectsHTML();
         initCRMCategorySelect(); 
-        initAddIndModalSelect();
         
-        // 如果目前 CRM 正好選到該分類，更新它
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
 
         return name;
     }
 
-    // --- Grid 操作 ---
-    const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
+    // --- 專屬宮格編輯視窗 (取代原性格子內的 Select) ---
+    let currentEditingGridId = null;
 
-    async function onGridSelectChange(selectEl) {
-        // 如果選到「新增」，開啟 Modal
-        if(selectEl.value === 'ADD_NEW') {
-            currentEditingSelect = selectEl;
-            openAddIndModal(); // 開啟視窗，不直接 prompt
+    function openGridEditModal(id) {
+        currentEditingGridId = id;
+        document.getElementById('gridEditModal').style.display = 'flex';
+
+        let currentVal = gridData[id] || "";
+        let currentCat = getCategoryOfIndustry(currentVal);
+
+        // 填充大分類
+        let catSelect = document.getElementById('gridEditCat');
+        let html = `<option value="" disabled selected>請選擇大分類...</option>`;
+        for (const cat of Object.keys(industryMap)) {
+            html += `<option value="${cat}">${cat}</option>`;
+        }
+        html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
+        catSelect.innerHTML = html;
+        catSelect.value = currentCat || "";
+
+        // 填充細項
+        updateGridEditSubSelect(currentVal);
+    }
+
+    function updateGridEditSubSelect(selectedSub = "") {
+        let cat = document.getElementById('gridEditCat').value;
+        let subSelect = document.getElementById('gridEditInd');
+
+        if (!cat || cat === "ADD_NEW_CAT") {
+            subSelect.innerHTML = `<option value="" disabled selected>請先選擇上方大分類</option>`;
+            return;
+        }
+
+        let html = `<option value="" disabled selected>請選擇細項...</option>`;
+        if (industryMap[cat]) {
+            industryMap[cat].forEach(item => {
+                html += `<option value="${item}">${item}</option>`;
+            });
+        }
+        html += `<option value="ADD_NEW_IND" style="color:var(--primary-color); font-weight:bold;">➕ 新增【細項】...</option>`;
+        subSelect.innerHTML = html;
+
+        if (selectedSub && industryMap[cat] && industryMap[cat].includes(selectedSub)) {
+            subSelect.value = selectedSub;
         } else {
-            let id = selectEl.dataset.id;
-            await saveCell(id, selectEl.value);
+            subSelect.value = "";
         }
     }
-    
-    // --- 新增產業 Modal 相關 ---
-    function openAddIndModal() {
-        document.getElementById('newIndCat').value = "";
-        document.getElementById('newIndNameInput').value = "";
-        document.getElementById('addIndModal').style.display = 'flex';
-    }
 
-    function closeAddIndModal() {
-        document.getElementById('addIndModal').style.display = 'none';
-        // 如果取消了，把選單轉回空白 (或原本的值，這裡簡化為空白)
-        if (currentEditingSelect && currentEditingSelect.value === 'ADD_NEW') {
-             // 嘗試讀取資料庫舊值，若無則空
-             let id = currentEditingSelect.dataset.id;
-             let oldVal = gridData[id] || "";
-             safelySetSelectValue(currentEditingSelect, oldVal);
-        }
-        currentEditingSelect = null;
-    }
-
-    async function confirmAddIndustry() {
-        const cat = document.getElementById('newIndCat').value;
-        const name = document.getElementById('newIndNameInput').value;
-
-        if (!cat) return alert("請選擇大分類！");
-        if (!name || name.trim() === "") return alert("請輸入項目名稱！");
-
-        document.getElementById('loading').style.display = 'block';
-        let savedName = await handleNewIndustry(name, cat);
-        document.getElementById('loading').style.display = 'none';
-
-        if (savedName) {
-            // 新增成功，填入原本觸發的選單
-            if (currentEditingSelect) {
-                safelySetSelectValue(currentEditingSelect, savedName);
-                let id = currentEditingSelect.dataset.id;
-                await saveCell(id, savedName);
+    async function onGridEditCatChange() {
+        let catSelect = document.getElementById('gridEditCat');
+        if (catSelect.value === 'ADD_NEW_CAT') {
+            let newCat = prompt("請輸入新的「大分類」名稱：");
+            if (newCat && newCat.trim() !== "") {
+                newCat = newCat.trim();
+                // 若大分類不存在，先建立一個空陣列在前端
+                if (!industryMap[newCat]) {
+                    industryMap[newCat] = [];
+                    // 重新渲染大分類下拉
+                    let html = `<option value="" disabled selected>請選擇大分類...</option>`;
+                    for (const c of Object.keys(industryMap)) {
+                        html += `<option value="${c}">${c}</option>`;
+                    }
+                    html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
+                    catSelect.innerHTML = html;
+                }
+                catSelect.value = newCat;
+                updateGridEditSubSelect();
+            } else {
+                catSelect.value = "";
+                updateGridEditSubSelect();
             }
-            document.getElementById('addIndModal').style.display = 'none';
+        } else {
+            updateGridEditSubSelect();
         }
     }
-    
+
+    async function onGridEditIndChange() {
+        let subSelect = document.getElementById('gridEditInd');
+        if (subSelect.value === 'ADD_NEW_IND') {
+            let cat = document.getElementById('gridEditCat').value;
+            let newInd = prompt(`您正在新增【${cat}】類別下的細項，請輸入名稱：`);
+            if (newInd && newInd.trim() !== "") {
+                document.getElementById('loading').style.display = 'block';
+                let savedName = await handleNewIndustry(newInd, cat);
+                document.getElementById('loading').style.display = 'none';
+                if (savedName) {
+                    updateGridEditSubSelect(savedName);
+                } else {
+                    subSelect.value = "";
+                }
+            } else {
+                subSelect.value = "";
+            }
+        }
+    }
+
+    function closeGridEditModal() {
+        document.getElementById('gridEditModal').style.display = 'none';
+        currentEditingGridId = null;
+    }
+
+    async function saveGridEdit() {
+        let subSelect = document.getElementById('gridEditInd');
+        let val = subSelect.value;
+        if (!val || val === 'ADD_NEW_IND') {
+            alert("請完整選擇大分類與細項！");
+            return;
+        }
+        await saveCell(currentEditingGridId, val);
+        closeGridEditModal();
+    }
+
+    async function clearGridCell() {
+        if (confirm("確定要清空此格嗎？")) {
+            await saveCell(currentEditingGridId, "");
+            closeGridEditModal();
+        }
+    }
+
     // --- CRM 頁面的新增 ---
     async function onCRMSelectChange() {
         const subSelect = document.getElementById('cIndustry');
         if (subSelect.value === 'ADD_NEW_CRM') {
-            const cat = document.getElementById('cCategory').value; // CRM 已經選好分類了
+            const cat = document.getElementById('cCategory').value; 
             let newName = prompt(`您正在新增【${cat}】類別下的項目，請輸入名稱：`);
             
             if (newName && newName.trim() !== "") {
@@ -496,8 +533,8 @@
         }
 
         renderGridStructure();  
-        await loadIndustries(); // 先載入產業
-        await loadGrid();       // 再填入使用者的選擇
+        await loadIndustries(); 
+        await loadGrid();       
         await loadContacts();   
         
         document.getElementById('loading').style.display = 'none';
@@ -547,6 +584,8 @@
     }
 
     // --- Grid Core ---
+    const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
+
     function renderGridStructure() {
         const el = document.getElementById('mandala');
         if(el.innerHTML) return; 
@@ -555,21 +594,22 @@
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
                 let cell = document.createElement('div'); 
-                let isM = (g===4 && c===4), isC = (c===4); // isM: 絕對中心, isC: 每個九宮格的中心
+                let isM = (g===4 && c===4), isC = (c===4); 
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
                 
-                let select = document.createElement('select');
-                select.className = 'grid-select';
+                // 改用 div 取代 select，點擊觸發編輯視窗
+                let div = document.createElement('div');
+                div.className = 'grid-select';
                 let id = `g${g}-c${c}`;
-                select.dataset.id = id;
-                // 預設空白
-                select.innerHTML = '<option value=""></option>'; 
-
-                if(g!==4 && c===4) select.disabled = true; 
-
-                select.onchange = (e) => onGridSelectChange(e.target);
+                div.dataset.id = id;
                 
-                cell.appendChild(select);
+                if(g!==4 && c===4) {
+                    div.style.pointerEvents = 'none'; // 外圍中心格不可編輯
+                } else {
+                    div.onclick = () => openGridEditModal(id);
+                }
+                
+                cell.appendChild(div);
                 sub.appendChild(cell);
             }
             el.appendChild(sub);
@@ -582,7 +622,7 @@
             data.forEach(item => {
                 gridData[item.grid_index] = item.content;
                 let el = document.querySelector(`.grid-select[data-id="${item.grid_index}"]`);
-                if(el) safelySetSelectValue(el, item.content);
+                if(el) el.innerText = item.content;
             });
         }
         syncGridVisualsOnly();
@@ -593,14 +633,19 @@
         gridData[index] = content;
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: index, content: content }, { onConflict: 'member_id, grid_index' });
 
+        // 更新畫面上的文字
+        let currentEl = document.querySelector(`.grid-select[data-id="${index}"]`);
+        if(currentEl) currentEl.innerText = content;
+
+        // 連動外圍核心格
         if(index.startsWith('g4-')) {
             let col = parseInt(index.split('c')[1]); 
             if (col !== 4) {
                 let outerGridId = mapCenterToOuter[col];
                 let targetId = `g${outerGridId}-c4`;
                 
-                let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
-                if(el) safelySetSelectValue(el, content);
+                let targetEl = document.querySelector(`.grid-select[data-id="${targetId}"]`);
+                if(targetEl) targetEl.innerText = content;
                 
                 gridData[targetId] = content;
                 await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: targetId, content: content }, { onConflict: 'member_id, grid_index' });
@@ -614,7 +659,7 @@
             let centerVal = gridData[`g4-c${i}`] || '';
             let targetId = `g${mapCenterToOuter[i]}-c4`;
             let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
-            if(el) safelySetSelectValue(el, centerVal);
+            if(el) el.innerText = centerVal;
         }
     }
 
