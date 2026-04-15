@@ -73,7 +73,7 @@
         .tag-green { background-color: #e8f5e9; color: #2e7d32; }
 
         /* Admin */
-        .admin-panel { background: white; border-radius: 8px; padding: 15px; }
+        .admin-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
         .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
@@ -206,6 +206,22 @@
             </table>
         </div>
     </div>
+    
+    <div class="admin-panel">
+        <div class="admin-header">
+            <h3>🏷️ 產業分類管理 (僅供刪除)</h3>
+            <button class="btn-sm" onclick="loadAdminIndustries()" style="background:#eee">🔄 重新整理</button>
+        </div>
+        <div style="background:#fff9c4; padding:10px; border-radius:4px; font-size:0.85rem; color:#fbc02d; margin-bottom:15px;">
+            ⚠️ 注意：刪除產業分類後，已經選擇該分類的宮格會顯示舊資料或空白。請謹慎操作。
+        </div>
+        <div style="overflow-x:auto">
+            <table class="std-table">
+                <thead><tr><th>大分類</th><th>細項名稱</th><th>操作</th></tr></thead>
+                <tbody id="admin-industry-list"></tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div class="modal-overlay" id="logModal">
@@ -244,12 +260,9 @@
             </select>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
-            <button class="btn-sm" style="background:#f44336; color:white; padding: 8px 12px;" onclick="clearGridCell()">🗑️ 清空</button>
-            <div>
-                <button class="btn-sm" style="background:#eee; color:#333; margin-right:5px; padding: 8px 12px;" onclick="closeGridEditModal()">取消</button>
-                <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveGridEdit()">確認儲存</button>
-            </div>
+        <div style="display: flex; justify-content: flex-end; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px; padding: 8px 12px;" onclick="closeGridEditModal()">取消</button>
+            <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveGridEdit()">確認儲存</button>
         </div>
     </div>
 </div>
@@ -368,10 +381,15 @@
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
 
+        // 若管理員剛好在後台，也順便更新後台列表
+        if (document.getElementById('admin-view').classList.contains('active')) {
+            loadAdminIndustries();
+        }
+
         return name;
     }
 
-    // --- 專屬宮格編輯視窗 (取代原性格子內的 Select) ---
+    // --- 專屬宮格編輯視窗 ---
     let currentEditingGridId = null;
 
     function openGridEditModal(id) {
@@ -426,10 +444,8 @@
             let newCat = prompt("請輸入新的「大分類」名稱：");
             if (newCat && newCat.trim() !== "") {
                 newCat = newCat.trim();
-                // 若大分類不存在，先建立一個空陣列在前端
                 if (!industryMap[newCat]) {
                     industryMap[newCat] = [];
-                    // 重新渲染大分類下拉
                     let html = `<option value="" disabled selected>請選擇大分類...</option>`;
                     for (const c of Object.keys(industryMap)) {
                         html += `<option value="${c}">${c}</option>`;
@@ -484,13 +500,6 @@
         closeGridEditModal();
     }
 
-    async function clearGridCell() {
-        if (confirm("確定要清空此格嗎？")) {
-            await saveCell(currentEditingGridId, "");
-            closeGridEditModal();
-        }
-    }
-
     // --- CRM 頁面的新增 ---
     async function onCRMSelectChange() {
         const subSelect = document.getElementById('cIndustry');
@@ -542,7 +551,7 @@
 
     function logout() { location.reload(); }
 
-    // --- Admin ---
+    // --- Admin: Members ---
     async function loadMembers() {
         if(currentMember.role !== 'admin') return;
         const { data } = await db.from('members').select('*').order('created_at', {ascending: true});
@@ -583,6 +592,35 @@
         loadMembers();
     }
 
+    // --- Admin: Industries (新增的刪除功能) ---
+    async function loadAdminIndustries() {
+        if(currentMember.role !== 'admin') return;
+        document.getElementById('loading').style.display = 'block';
+        const { data } = await db.from('industries').select('*').order('category').order('name');
+        const list = document.getElementById('admin-industry-list');
+        list.innerHTML = '';
+        if(data) {
+            data.forEach(ind => {
+                list.innerHTML += `
+                    <tr>
+                        <td>${ind.category || '未分類'}</td>
+                        <td>${ind.name}</td>
+                        <td><button class="btn-sm btn-del" onclick="deleteIndustry('${ind.id}', '${ind.name}')">刪除</button></td>
+                    </tr>`;
+            });
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function deleteIndustry(id, name) {
+        if(!confirm(`確定要從資料庫中永久刪除【${name}】嗎？\n注意：這可能會影響已經選擇此項目的使用者。`)) return;
+        document.getElementById('loading').style.display = 'block';
+        await db.from('industries').delete().eq('id', id);
+        await loadIndustries(); // 重新載入前端全域快取
+        await loadAdminIndustries(); // 重新載入後台列表
+        document.getElementById('loading').style.display = 'none';
+    }
+
     // --- Grid Core ---
     const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
 
@@ -597,7 +635,6 @@
                 let isM = (g===4 && c===4), isC = (c===4); 
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
                 
-                // 改用 div 取代 select，點擊觸發編輯視窗
                 let div = document.createElement('div');
                 div.className = 'grid-select';
                 let id = `g${g}-c${c}`;
@@ -628,16 +665,13 @@
         syncGridVisualsOnly();
     }
 
-    // 儲存邏輯
     async function saveCell(index, content) {
         gridData[index] = content;
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: index, content: content }, { onConflict: 'member_id, grid_index' });
 
-        // 更新畫面上的文字
         let currentEl = document.querySelector(`.grid-select[data-id="${index}"]`);
         if(currentEl) currentEl.innerText = content;
 
-        // 連動外圍核心格
         if(index.startsWith('g4-')) {
             let col = parseInt(index.split('c')[1]); 
             if (col !== 4) {
@@ -838,10 +872,25 @@
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
-        else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
-        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
-        else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); loadMembers(); }
+        if(t==='grid') { 
+            document.getElementById('grid-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[0].classList.add('active'); 
+        }
+        else if(t==='matches') { 
+            document.getElementById('matches-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[1].classList.add('active'); 
+            loadMatches(); 
+        }
+        else if(t==='crm') { 
+            document.getElementById('crm-view').classList.add('active'); 
+            document.querySelectorAll('.tab-btn')[2].classList.add('active'); 
+        }
+        else if(t==='admin') { 
+            document.getElementById('admin-view').classList.add('active'); 
+            document.getElementById('adminTabBtn').classList.add('active'); 
+            loadMembers(); 
+            loadAdminIndustries(); 
+        }
     }
 </script>
 </body>
