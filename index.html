@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (完美分類即時版)</title>
+    <title>雲貴人脈系統 (完美分類即時更新版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -215,14 +215,16 @@
             <button class="btn-sm" onclick="loadAdminIndustries()" style="background:#eee">🔄 重新整理</button>
         </div>
         <div style="background:#e8f5e9; padding:10px; border-radius:4px; font-size:0.85rem; color:#2e7d32; margin-bottom:15px;">
-            💡 提示：在此修改產業名稱，系統會自動同步更新所有會員的 81 宮格與人脈庫資料。
+            💡 提示：若細項名稱留白，將單獨建立「大分類」；修改名稱時系統會自動同步更新所有人的資料。
         </div>
 
         <div class="admin-form">
             <h4>➕ 新增產業分類</h4>
             <div class="row">
-                <input id="newAdminCat" placeholder="大分類 (可輸入現有或全新分類)">
-                <input id="newAdminInd" placeholder="細項名稱">
+                <select id="newAdminCat" onchange="onAdminAddCatChange()" style="flex:1;">
+                    <option value="" disabled selected>請選擇大分類...</option>
+                </select>
+                <input id="newAdminInd" placeholder="細項名稱 (單獨新增大分類請留白)" style="flex:1;">
                 <button class="btn-sm" style="background:var(--primary-color); color:white; flex:0.5;" onclick="addAdminIndustry()">新增</button>
             </div>
         </div>
@@ -259,22 +261,39 @@
 <div class="modal-overlay" id="gridEditModal">
     <div class="modal" style="max-width:320px;">
         <h3 style="margin-top:0;">✏️ 編輯產業宮格</h3>
-        
         <div style="margin-bottom:15px;">
             <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 選擇大分類：</label>
-            <select id="gridEditCat" style="width:100%; box-sizing:border-box;" onchange="onGridEditCatChange()">
-            </select>
+            <select id="gridEditCat" style="width:100%; box-sizing:border-box;" onchange="onGridEditCatChange()"></select>
         </div>
-
         <div style="margin-bottom:15px;">
             <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 選擇細項：</label>
-            <select id="gridEditInd" style="width:100%; box-sizing:border-box;" onchange="onGridEditIndChange()">
-            </select>
+            <select id="gridEditInd" style="width:100%; box-sizing:border-box;" onchange="onGridEditIndChange()"></select>
         </div>
-
         <div style="display: flex; justify-content: flex-end; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
             <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px; padding: 8px 12px;" onclick="closeGridEditModal()">取消</button>
             <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveGridEdit()">確認儲存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="adminEditIndModal">
+    <div class="modal" style="max-width:320px;">
+        <h3 style="margin-top:0;">✏️ 修改產業項目</h3>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 大分類：</label>
+            <select id="adminEditCat" style="width:100%; box-sizing:border-box;" onchange="onAdminEditCatChange()"></select>
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 細項名稱：</label>
+            <input id="adminEditIndName" style="width:100%; box-sizing:border-box;" placeholder="(留白代表僅為大分類)">
+        </div>
+        
+        <input type="hidden" id="adminEditIndId">
+        <input type="hidden" id="adminEditOldIndName">
+
+        <div style="display: flex; justify-content: flex-end; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+            <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px; padding: 8px 12px;" onclick="closeAdminEditModal()">取消</button>
+            <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveAdminEdit()">確認儲存</button>
         </div>
     </div>
 </div>
@@ -316,7 +335,6 @@
         selectElement.value = value;
     }
 
-    // --- 尋找項目所屬大分類 ---
     function getCategoryOfIndustry(indName) {
         if (!indName) return "";
         for (const [cat, items] of Object.entries(industryMap)) {
@@ -336,11 +354,67 @@
             data.forEach(row => {
                 let cat = row.category || "未分類";
                 if (!industryMap[cat]) industryMap[cat] = [];
-                industryMap[cat].push(row.name);
-                allIndustriesFlat.push(row.name);
+                // 如果 name 不是空白，才推入細項陣列
+                if (row.name && row.name.trim() !== "") {
+                    industryMap[cat].push(row.name);
+                    allIndustriesFlat.push(row.name);
+                }
             });
         }
         initCRMCategorySelect();
+        updateAdminCatSelect(); // 更新後台的下拉選單
+    }
+
+    // 更新後台的「大分類」下拉選單
+    function updateAdminCatSelect() {
+        const selects = [document.getElementById('newAdminCat'), document.getElementById('adminEditCat')];
+        let html = `<option value="" disabled selected>請選擇大分類...</option>`;
+        for (const cat of Object.keys(industryMap)) {
+            html += `<option value="${cat}">${cat}</option>`;
+        }
+        html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
+        
+        selects.forEach(sel => {
+            if(!sel) return;
+            let currentVal = sel.value;
+            sel.innerHTML = html;
+            // 復原原本的選項 (如果它還存在)
+            if(currentVal && currentVal !== 'ADD_NEW_CAT' && industryMap[currentVal] !== undefined) {
+                sel.value = currentVal;
+            }
+        });
+    }
+
+    // 後台新增選單 - 選到「新增大分類」
+    function onAdminAddCatChange() {
+        let sel = document.getElementById('newAdminCat');
+        if (sel.value === 'ADD_NEW_CAT') {
+            let newCat = prompt("請輸入新的「大分類」名稱：");
+            if (newCat && newCat.trim() !== "") {
+                newCat = newCat.trim();
+                if (!industryMap[newCat]) industryMap[newCat] = [];
+                updateAdminCatSelect();
+                sel.value = newCat;
+            } else {
+                sel.value = "";
+            }
+        }
+    }
+
+    // 後台編輯視窗 - 選到「新增大分類」
+    function onAdminEditCatChange() {
+        let sel = document.getElementById('adminEditCat');
+        if (sel.value === 'ADD_NEW_CAT') {
+            let newCat = prompt("請輸入新的「大分類」名稱：");
+            if (newCat && newCat.trim() !== "") {
+                newCat = newCat.trim();
+                if (!industryMap[newCat]) industryMap[newCat] = [];
+                updateAdminCatSelect();
+                sel.value = newCat;
+            } else {
+                sel.value = ""; 
+            }
+        }
     }
 
     // --- 初始化即時推播 (Realtime) ---
@@ -349,18 +423,15 @@
           .on('postgres_changes', { event: '*', schema: 'public', table: 'industries' }, async (payload) => {
               console.log('偵測到產業資料變動，背景自動更新中...');
               
-              // 記錄目前編輯視窗的狀態 (避免更新時清空使用者正在選擇的選項)
               const modalCat = document.getElementById('gridEditCat') ? document.getElementById('gridEditCat').value : null;
               const modalInd = document.getElementById('gridEditInd') ? document.getElementById('gridEditInd').value : null;
               
               await loadIndustries();
               
-              // 如果使用者在後台，順便更新後台列表
               if (document.getElementById('admin-view').classList.contains('active')) {
                   loadAdminIndustries();
               }
               
-              // 如果編輯視窗開著，試著還原使用者的選項
               if (document.getElementById('gridEditModal').style.display === 'flex') {
                   if (modalCat && modalCat !== 'ADD_NEW_CAT') document.getElementById('gridEditCat').value = modalCat;
                   updateGridEditSubSelect();
@@ -370,10 +441,10 @@
           .subscribe();
     }
 
-    // 初始化 CRM 的大分類 (加入新增大分類功能，並保留當前選項)
+    // --- CRM 選單邏輯 ---
     function initCRMCategorySelect() {
         const catSelect = document.getElementById('cCategory');
-        const currentCat = catSelect.value; // 保存目前的選擇，避免 Realtime 更新時被洗掉
+        const currentCat = catSelect.value; 
 
         let html = `<option value="" disabled selected>1. 選擇大分類</option>`;
         for (const cat of Object.keys(industryMap)) {
@@ -382,15 +453,13 @@
         html += `<option value="ADD_NEW_CRM_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
         catSelect.innerHTML = html;
 
-        // 如果原本有選擇，且該選擇依然存在，就還原它
         if (currentCat && industryMap[currentCat]) {
             catSelect.value = currentCat;
         }
         
-        updateSubIndustrySelect(true); // 帶入 true 表示這是背景更新，嘗試保留細項
+        updateSubIndustrySelect(true); 
     }
 
-    // CRM 大分類連動事件
     async function onCRMCatChange() {
         const catSelect = document.getElementById('cCategory');
         if (catSelect.value === 'ADD_NEW_CRM_CAT') {
@@ -400,6 +469,7 @@
                 if (!industryMap[newCat]) {
                     industryMap[newCat] = [];
                     initCRMCategorySelect();
+                    updateAdminCatSelect();
                 }
                 catSelect.value = newCat;
                 updateSubIndustrySelect();
@@ -412,11 +482,10 @@
         }
     }
 
-    // CRM 連動細項選單
     function updateSubIndustrySelect(isBackgroundUpdate = false) {
         const cat = document.getElementById('cCategory').value;
         const subSelect = document.getElementById('cIndustry');
-        const currentSub = subSelect.value; // 保存當前選擇
+        const currentSub = subSelect.value; 
 
         if (!cat || !industryMap[cat] || cat === "ADD_NEW_CRM_CAT") {
             subSelect.innerHTML = `<option value="" disabled selected>無資料</option>`;
@@ -434,29 +503,29 @@
         }
     }
 
-    // --- 共用：新增產業邏輯 ---
+    // --- 共用：新增產業邏輯 (支援細項留白) ---
     async function handleNewIndustry(name, category) {
-        if (!name) return null;
-        name = name.trim();
+        name = name ? name.trim() : "";
         category = category ? category.trim() : "未分類";
-        if(name === "") return null;
         
-        if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
+        // 只有在填寫了細項名稱時，才去檢查是否重複
+        if (name !== "" && allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
             alert("此產業細項已存在！");
             return name; 
         }
 
-        // 新增進資料庫，Realtime 會自動觸發 loadIndustries() 同步全站
+        // 寫入資料庫
         await db.from('industries').insert({ name: name, category: category });
         
-        // 前端先行手動更新，讓當下操作的人不用等
+        // 前端手動更新
         if (!industryMap[category]) industryMap[category] = [];
-        if (!industryMap[category].includes(name)) {
+        if (name !== "" && !industryMap[category].includes(name)) {
             industryMap[category].push(name);
             allIndustriesFlat.push(name);
         }
         
         initCRMCategorySelect(); 
+        updateAdminCatSelect();
         
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
@@ -619,7 +688,6 @@
         await loadGrid();       
         await loadContacts();   
         
-        // 登入成功後，開啟即時監聽機制
         setupRealtime();
         
         document.getElementById('loading').style.display = 'none';
@@ -627,14 +695,14 @@
 
     function logout() { location.reload(); }
 
-    // --- Admin: Members (設定管理員功能) ---
+    // --- Admin: Members ---
     async function loadMembers() {
         if(currentMember.role !== 'admin') return;
         const { data } = await db.from('members').select('*').order('created_at', {ascending: true});
         const list = document.getElementById('member-list');
         list.innerHTML = '';
         data.forEach(m => {
-            if(m.role === 'admin' && m.name === 'admin') return; // 保護根管理員
+            if(m.role === 'admin' && m.name === 'admin') return; 
             
             let roleBadge = m.role === 'admin' ? '🔴 管理員' : '🔵 會員';
             let toggleBtn = m.role === 'admin' 
@@ -655,7 +723,6 @@
     async function toggleRole(id, newRole, name) {
         let actionStr = newRole === 'admin' ? '升級為「管理員」' : '降級為「一般會員」';
         if(!confirm(`確定要將 ${name} ${actionStr} 嗎？`)) return;
-        
         document.getElementById('loading').style.display = 'block';
         await db.from('members').update({ role: newRole }).eq('id', id);
         await loadMembers();
@@ -685,7 +752,7 @@
         loadMembers();
     }
 
-    // --- Admin: Industries (CRUD與連動更新) ---
+    // --- Admin: Industries ---
     async function loadAdminIndustries() {
         if(currentMember.role !== 'admin') return;
         document.getElementById('loading').style.display = 'block';
@@ -695,13 +762,17 @@
         if(data) {
             data.forEach(ind => {
                 let catText = ind.category || '未分類';
+                let dispName = ind.name ? ind.name : '<span style="color:#999; font-style:italic;">(僅大分類，無細項)</span>';
+                let safeName = ind.name ? ind.name.replace(/'/g, "\\'") : '';
+                let safeCat = catText.replace(/'/g, "\\'");
+
                 list.innerHTML += `
                     <tr>
                         <td>${catText}</td>
-                        <td>${ind.name}</td>
+                        <td>${dispName}</td>
                         <td>
-                            <button class="btn-sm btn-edit" onclick="editIndustry('${ind.id}', '${catText}', '${ind.name}')">修改</button>
-                            <button class="btn-sm btn-del" onclick="deleteIndustry('${ind.id}', '${ind.name}')">刪除</button>
+                            <button class="btn-sm btn-edit" onclick="openAdminEditModal('${ind.id}', '${safeCat}', '${safeName}')">修改</button>
+                            <button class="btn-sm btn-del" onclick="deleteIndustry('${ind.id}', '${safeName}')">刪除</button>
                         </td>
                     </tr>`;
             });
@@ -710,49 +781,65 @@
     }
 
     async function addAdminIndustry() {
-        let cat = document.getElementById('newAdminCat').value.trim();
+        let cat = document.getElementById('newAdminCat').value;
         let name = document.getElementById('newAdminInd').value.trim();
-        if(!cat || !name) return alert("請輸入大分類與細項名稱");
+        if(!cat || cat === 'ADD_NEW_CAT') return alert("請選擇大分類");
+        
         document.getElementById('loading').style.display = 'block';
         await handleNewIndustry(name, cat);
         document.getElementById('newAdminCat').value = '';
         document.getElementById('newAdminInd').value = '';
         document.getElementById('loading').style.display = 'none';
+        
+        // 若是在後台新增純大分類，手動重整列表以確保顯示
+        loadAdminIndustries(); 
     }
 
-    async function editIndustry(id, oldCat, oldName) {
-        let newCat = prompt("修改「大分類」名稱 (若不修改請直接按確認):", oldCat);
-        if(newCat === null) return; 
-        newCat = newCat.trim() || oldCat;
+    // --- 後台編輯產業 Modal ---
+    function openAdminEditModal(id, oldCat, oldName) {
+        document.getElementById('adminEditIndId').value = id;
+        document.getElementById('adminEditOldIndName').value = oldName;
+        document.getElementById('adminEditCat').value = oldCat;
+        document.getElementById('adminEditIndName').value = oldName;
+        document.getElementById('adminEditIndModal').style.display = 'flex';
+    }
 
-        let newName = prompt("修改「細項」名稱 (若不修改請直接按確認):", oldName);
-        if(newName === null) return;
-        newName = newName.trim();
-        if(!newName) return alert("細項名稱不可為空白");
+    function closeAdminEditModal() {
+        document.getElementById('adminEditIndModal').style.display = 'none';
+    }
+
+    async function saveAdminEdit() {
+        let id = document.getElementById('adminEditIndId').value;
+        let oldName = document.getElementById('adminEditOldIndName').value;
+        let newCat = document.getElementById('adminEditCat').value;
+        let newName = document.getElementById('adminEditIndName').value.trim();
+        
+        if(!newCat || newCat === 'ADD_NEW_CAT') return alert("請選擇大分類");
 
         document.getElementById('loading').style.display = 'block';
         
-        // 1. 更新產業庫
+        // 更新資料庫
         await db.from('industries').update({ category: newCat, name: newName }).eq('id', id);
         
-        // 2. 如果細項名稱有改，連動更新所有會員的 81宮格 和 人脈表
-        if (newName !== oldName) {
+        // 如果細項名稱有更改，且舊名稱不是空白 (純分類)，才進行連動更新
+        if (oldName !== "" && newName !== oldName) {
             await db.from('user_grids').update({ content: newName }).eq('content', oldName);
             await db.from('user_contacts').update({ industry: newName }).eq('industry', oldName);
         }
 
-        // 3. 重新載入快取與畫面
         await loadIndustries();
         await loadAdminIndustries();
         await loadGrid();
         await loadContacts();
 
+        closeAdminEditModal();
         document.getElementById('loading').style.display = 'none';
         alert("修改並同步更新完成！");
     }
 
     async function deleteIndustry(id, name) {
-        if(!confirm(`確定要永久刪除【${name}】嗎？\n注意：這可能會讓已經選擇此項目的使用者格子顯示空白。`)) return;
+        let msg = name === "" ? "確定要刪除這個空的大分類嗎？" : `確定要永久刪除【${name}】嗎？\n注意：這可能會讓已經選擇此項目的使用者格子顯示空白。`;
+        if(!confirm(msg)) return;
         document.getElementById('loading').style.display = 'block';
         await db.from('industries').delete().eq('id', id);
         await loadIndustries(); 
