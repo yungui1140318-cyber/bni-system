@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260415-11)</title>
+    <title>雲貴人脈系統 (Ver 20260421-01)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -145,7 +145,7 @@
 
 <div id="matches-view" class="container">
     <div style="margin-bottom:15px; color:#666; font-size:0.9rem; padding:10px; background:#e3f2fd; border-radius:4px;">
-        💡 系統會根據您 <b>81 宮格核心圈 (中間那格)</b> 的需求，自動搜尋全分會夥伴的人脈庫。
+        💡 系統會根據您 <b>81 宮格中填寫的所有產業</b> 需求，自動搜尋全分會夥伴的人脈庫。
     </div>
     <div id="match-results"></div>
 </div>
@@ -991,15 +991,21 @@
         const resDiv = document.getElementById('match-results');
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
 
-        myNeeds = [];
-        for(let i=0; i<9; i++) {
-            if (i === 4) continue; 
-            let val = gridData[`g4-c${i}`];
-            if(val && val.trim() !== '') myNeeds.push(val);
+        // 使用 Set 自動過濾重複的產業項目
+        let uniqueNeeds = new Set();
+        for(let g=0; g<9; g++) {
+            for(let c=0; c<9; c++) {
+                if (g === 4 && c === 4) continue; // 排除正中心(自己)
+                let val = gridData[`g${g}-c${c}`];
+                if(val && val.trim() !== '') {
+                    uniqueNeeds.add(val);
+                }
+            }
         }
+        myNeeds = Array.from(uniqueNeeds);
 
         if(myNeeds.length === 0) {
-            resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」的中間九格選擇您的需求產業。</div>';
+            resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」中選擇您的需求產業。</div>';
             return;
         }
 
