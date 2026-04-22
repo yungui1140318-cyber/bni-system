@@ -10,60 +10,51 @@
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg-color); height: 100vh; display: flex; flex-direction: column; color: var(--text-color); overflow: hidden; }
 
         /* Login Overlay */
-        #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .box h2 { margin-top: 0; color: #333; }
-        .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; outline: none; }
-        .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; box-sizing: border-box; }
+        .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         
-        /* Layout */
-        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
-        .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
-        .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; white-space: nowrap; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 80px; display: inline-block; }
+        .tabs-container { background: #fff; padding: 10px; z-index: 10; flex-shrink: 0; border-bottom: 1px solid #ddd; }
+        .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 80px; }
         .tab-btn.active { background: var(--primary-color); color: white; }
-        .tab-btn-admin { display: none; color: #d32f2f; } 
 
-        .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
-        .container.active { display: block; animation: fadeIn 0.3s ease; }
+        .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; }
+        .container.active { display: block; }
 
         /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
-        .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); z-index: 5; position: relative; }
-        .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
-        
+        .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; background: #fff; }
         .grid-select { width: 100%; height: 100%; text-align: center; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; padding: 4px; box-sizing: border-box; word-break: break-all; }
-        .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
-        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.95rem; }
+        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; }
 
-        /* CRM Form & Select Enhancement */
+        /* CRM UI */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
-        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        
+        /* 雙軌選擇區樣式 */
+        .selection-split { display: flex; flex-direction: column; gap: 15px; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-bottom: 10px; }
+        .split-title { font-size: 0.85rem; font-weight: bold; color: #cf2e2e; margin-bottom: 5px; border-left: 3px solid #cf2e2e; padding-left: 8px; }
+        .search-input-box { border: 2px solid #2196f3 !important; } /* 用顏色區分搜尋框 */
 
-        .search-group { flex: 1; min-width: 250px; display: flex; flex-direction: column; gap: 5px; }
-        .search-input { border: 2px solid #ddd !important; background: #fff; }
-        .search-input:focus { border-color: var(--primary-color) !important; outline: none; }
+        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
 
         /* Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
-        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
 
-        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
-
+        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; display: none; z-index: 20000; }
         .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; }
-        .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; }
 
-        @media (max-width: 768px) {
-            .mandala { grid-template-columns: 1fr; }
-            .sub-grid { aspect-ratio: auto; min-height: 150px; }
-        }
+        @media (max-width: 768px) { .mandala { grid-template-columns: 1fr; } .sub-grid { aspect-ratio: auto; min-height: 150px; } }
     </style>
 </head>
 <body>
@@ -78,9 +69,8 @@
 <div id="identity-overlay">
     <div class="box">
         <h2>雲貴人脈系統</h2>
-        <p>請登入系統</p>
         <input type="text" id="loginName" placeholder="帳號 / 姓名">
-        <input type="password" id="loginPwd" placeholder="密碼" onkeypress="if(event.key==='Enter') login()">
+        <input type="password" id="loginPwd" placeholder="密碼">
         <button onclick="login()">登入</button>
     </div>
 </div>
@@ -95,7 +85,6 @@
         <div class="tab-btn active" onclick="switchTab('grid')">產業鏈 81 宮格</div>
         <div class="tab-btn" onclick="switchTab('matches')">🤝 資源媒合</div>
         <div class="tab-btn" onclick="switchTab('crm')">人脈變現表</div>
-        <div class="tab-btn tab-btn-admin" id="adminTabBtn" onclick="switchTab('admin')">⚙️ 後台</div>
     </div>
 </div>
 
@@ -103,46 +92,66 @@
     <div class="mandala" id="mandala"></div>
 </div>
 
-<div id="matches-view" class="container">
-    <div id="match-results"></div>
-</div>
-
 <div id="crm-view" class="container">
     <div class="crm-form">
-        <div class="row">
-            <input id="cName" placeholder="人脈姓名">
-        </div>
-        <div class="row" style="background:#f9f9f9; padding:12px; border-radius:8px; border:1px solid #eee;">
-            <div class="search-group">
-                <div style="font-size:0.8rem; color:#666;">🔍 搜尋細項 (或直接在下方選擇)</div>
-                <input type="text" id="crmSearch" class="search-input" placeholder="輸入關鍵字篩選..." oninput="filterSelect('crm')">
-                <select id="cIndustry">
-                    <option value="" disabled selected>載入中...</option>
-                </select>
+        <div class="row"><input id="cName" placeholder="人脈姓名"></div>
+        
+        <div class="selection-split">
+            <div>
+                <div class="split-title">方式 1：按引薦圈分類選擇</div>
+                <div class="row">
+                    <select id="cCategory" onchange="onCRMCatChange()">
+                        <option value="" disabled selected>1. 先選 8 大引薦圈</option>
+                    </select>
+                    <select id="cIndustry">
+                        <option value="" disabled selected>2. 再選細項</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="text-align: center; color: #999; font-size: 0.8rem;">— 或 —</div>
+
+            <div>
+                <div class="split-title">方式 2：快速全局搜尋</div>
+                <div class="row">
+                    <input type="text" id="crmGlobalSearch" class="search-input-box" placeholder="🔍 直接搜尋，例如：水電、法律..." oninput="globalSearch('crm')">
+                    <select id="crmGlobalResult" onchange="onGlobalResultSelect('crm')">
+                        <option value="" disabled selected>等待搜尋結果...</option>
+                    </select>
+                </div>
             </div>
         </div>
+
         <div class="row">
-            <select id="cTrust">
-                <option value="A">A.極熟悉信任</option><option value="B">B.交情不錯</option><option value="C">C.不熟</option><option value="D">D.陌生</option>
-            </select>
-            <select id="cNeed">
-                <option value="X">X-需求極高</option><option value="Y">Y-一般需求</option><option value="Z">Z-不了解</option>
-            </select>
+            <select id="cTrust"><option value="A">A.極熟悉</option><option value="B">B.交情不錯</option><option value="C">C.不熟</option></select>
+            <select id="cNeed"><option value="X">X-需求高</option><option value="Y">Y-一般</option><option value="Z">Z-不了解</option></select>
         </div>
         <button class="btn-main" onclick="addContact()">新增人脈資源</button>
     </div>
-    <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>策略</th><th>姓名/產業</th><th>操作</th></tr></thead><tbody id="contact-list"></tbody></table></div>
+    <div style="overflow-x:auto"><table class="std-table"><tbody id="contact-list"></tbody></table></div>
 </div>
 
 <div class="modal-overlay" id="gridEditModal">
     <div class="modal">
         <h3 style="margin-top:0;">✏️ 編輯產業宮格</h3>
-        <div class="search-group">
-            <div style="font-size:0.8rem; color:#666;">🔍 搜尋細項 (或直接在下方選擇)</div>
-            <input type="text" id="gridSearch" class="search-input" placeholder="輸入關鍵字..." oninput="filterSelect('grid')">
-            <select id="gridEditInd" style="width:100%; margin-top:8px;"></select>
+        
+        <div class="selection-split">
+            <div>
+                <div class="split-title">方式 1：分類選擇</div>
+                <select id="gridEditCat" onchange="onGridEditCatChange()" style="width:100%; margin-bottom:8px;"></select>
+                <select id="gridEditInd" style="width:100%;"></select>
+            </div>
+            <div style="text-align: center; color: #999; font-size: 0.8rem;">— 或 —</div>
+            <div>
+                <div class="split-title">方式 2：全局搜尋</div>
+                <input type="text" id="gridGlobalSearch" class="search-input-box" placeholder="🔍 直接輸入搜尋關鍵字..." oninput="globalSearch('grid')" style="width:100%; margin-bottom:8px;">
+                <select id="gridGlobalResult" onchange="onGlobalResultSelect('grid')" style="width:100%;">
+                    <option value="" disabled selected>請輸入關鍵字...</option>
+                </select>
+            </div>
         </div>
-        <div style="display: flex; justify-content: flex-end; margin-top:20px; gap:10px;">
+
+        <div style="display: flex; justify-content: flex-end; gap:10px; margin-top:15px;">
             <button onclick="closeGridEditModal()" style="padding:8px 15px;">取消</button>
             <button class="btn-main" onclick="saveGridEdit()" style="width:auto; padding:8px 25px;">確認儲存</button>
         </div>
@@ -155,51 +164,72 @@
     
     let currentMember = null;
     let gridData = {}; 
-    let allIndustries = []; // [{name, category}]
+    let industryMap = {}; // { 分類: [項目] }
+    let allIndustriesFlat = []; // [{name, category}]
 
-    // --- 智能過濾與下拉選單生成 ---
-    function filterSelect(type, selectedVal = "") {
-        const inputId = type === 'grid' ? 'gridSearch' : 'crmSearch';
-        const selectId = type === 'grid' ? 'gridEditInd' : 'cIndustry';
-        const addNewValue = type === 'grid' ? 'ADD_NEW_GRID' : 'ADD_NEW_CRM';
-        
-        const keyword = document.getElementById(inputId).value.trim().toLowerCase();
-        const selectEl = document.getElementById(selectId);
-        
-        // 過濾資料
-        const filtered = allIndustries.filter(i => i.name.toLowerCase().includes(keyword));
-        
-        // 按分類分群 (例如: 建築規劃圈、商業服務圈...)
-        const grouped = filtered.reduce((acc, obj) => {
-            const key = obj.category || '未分類';
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(obj.name);
-            return acc;
-        }, {});
+    // --- 全局搜尋邏輯 (方案 B) ---
+    function globalSearch(type) {
+        const keyword = document.getElementById(type === 'grid' ? 'gridGlobalSearch' : 'crmGlobalSearch').value.trim().toLowerCase();
+        const resultSelect = document.getElementById(type === 'grid' ? 'gridGlobalResult' : 'crmGlobalResult');
 
-        let html = `<option value="" disabled ${!selectedVal ? 'selected' : ''}>--- 請選擇產業細項 (${filtered.length}) ---</option>`;
-        
-        for (const [cat, items] of Object.entries(grouped)) {
-            html += `<optgroup label="【${cat}】">`;
-            items.forEach(item => {
-                html += `<option value="${item}" ${item === selectedVal ? 'selected' : ''}>${item}</option>`;
-            });
-            html += `</optgroup>`;
+        if (!keyword) {
+            resultSelect.innerHTML = '<option value="" disabled selected>請輸入關鍵字...</option>';
+            return;
         }
+
+        const matches = allIndustriesFlat.filter(i => i.name.toLowerCase().includes(keyword));
+        let html = `<option value="" disabled selected>搜尋到 ${matches.length} 個結果</option>`;
+        matches.forEach(m => {
+            html += `<option value="${m.name}" data-cat="${m.category}">${m.name} (${m.category})</option>`;
+        });
+
+        // 允許使用者直接新增
+        html += `<option value="ADD_NEW_GLOBAL" style="color:red; font-weight:bold;">➕ 找不到？新增「${keyword}」</option>`;
+        resultSelect.innerHTML = html;
+    }
+
+    // 當全局搜尋選中項目時，自動連動方案 A 的選單
+    function onGlobalResultSelect(type) {
+        const resultSelect = document.getElementById(type === 'grid' ? 'gridGlobalResult' : 'crmGlobalResult');
+        const val = resultSelect.value;
+        if (!val || val === 'ADD_NEW_GLOBAL') return;
+
+        const cat = resultSelect.options[resultSelect.selectedIndex].getAttribute('data-cat');
         
-        // 快捷新增選項
-        if (keyword) {
-            html += `<option value="${addNewValue}" style="color:var(--primary-color); font-weight:bold;">➕ 新增「${keyword}」至資料庫...</option>`;
-        }
-        
-        selectEl.innerHTML = html;
+        // 自動更新方案 A 的選單，讓使用者知道它的歸類
+        const catSelect = document.getElementById(type === 'grid' ? 'gridEditCat' : 'cCategory');
+        const indSelect = document.getElementById(type === 'grid' ? 'gridEditInd' : 'cIndustry');
+
+        catSelect.value = cat;
+        updateSubOptions(type, cat, val);
+    }
+
+    // --- 傳統下拉邏輯 (方案 A) ---
+    function onCRMCatChange() { updateSubOptions('crm', document.getElementById('cCategory').value); }
+    function onGridEditCatChange() { updateSubOptions('grid', document.getElementById('gridEditCat').value); }
+
+    function updateSubOptions(type, cat, selectedVal = "") {
+        const indSelect = document.getElementById(type === 'grid' ? 'gridEditInd' : 'cIndustry');
+        const items = industryMap[cat] || [];
+        let html = `<option value="" disabled ${!selectedVal?'selected':''}>請選擇細項</option>`;
+        items.forEach(i => {
+            html += `<option value="${i}" ${i === selectedVal ? 'selected' : ''}>${i}</option>`;
+        });
+        indSelect.innerHTML = html;
     }
 
     async function loadIndustries() {
-        let { data } = await db.from('industries').select('category, name').order('category').order('name');
-        allIndustries = data || [];
-        // 初始化 CRM 視圖的下拉選單
-        filterSelect('crm');
+        let { data } = await db.from('industries').select('category, name').order('name');
+        industryMap = {}; allIndustriesFlat = data || [];
+        data?.forEach(row => {
+            const c = row.category || "未分類";
+            if (!industryMap[c]) industryMap[c] = [];
+            industryMap[c].push(row.name);
+        });
+        const cats = Object.keys(industryMap);
+        const html = '<option value="" disabled selected>1. 先選 8 大引薦圈</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('cCategory').innerHTML = html;
+        document.getElementById('gridEditCat').innerHTML = html;
     }
 
     async function login() {
@@ -208,59 +238,51 @@
         document.getElementById('loading').style.display = 'block';
         let { data: member } = await db.from('members').select('*').eq('name', name).eq('password', pwd).single();
         document.getElementById('loading').style.display = 'none';
-        if (!member) return alert("帳號或密碼錯誤");
+        if (!member) return alert("錯誤");
         currentMember = member;
-        document.getElementById('displayUser').innerText = member.name + " (登出)";
         document.getElementById('identity-overlay').style.display = 'none';
-        if(member.role === 'admin') document.getElementById('adminTabBtn').style.display = 'inline-block';
         renderGridStructure();
         await loadIndustries();
         await loadGrid();
         await loadContacts();
     }
 
-    // --- 宮格編輯邏輯 ---
+    // --- 宮格邏輯 ---
     let currentEditingId = null;
     function openGridEditModal(id) {
         currentEditingId = id;
-        const currentVal = gridData[id] || "";
-        document.getElementById('gridSearch').value = ""; // 清空搜尋框
-        filterSelect('grid', currentVal); // 生成下拉選單並預選
+        document.getElementById('gridGlobalSearch').value = "";
+        document.getElementById('gridGlobalResult').innerHTML = '<option value="" disabled selected>請輸入關鍵字...</option>';
         document.getElementById('gridEditModal').style.display = 'flex';
     }
 
     async function saveGridEdit() {
-        const select = document.getElementById('gridEditInd');
-        let val = select.value;
-        if (!val) return alert("請選擇細項");
+        const indSelect = document.getElementById('gridEditInd');
+        const globalResult = document.getElementById('gridGlobalResult');
+        let val = indSelect.value || globalResult.value;
         
-        if (val === 'ADD_NEW_GRID') {
-            const newName = document.getElementById('gridSearch').value;
-            const cat = prompt(`「${newName}」屬於哪個圈子？\n1.建築規劃 2.商業服務 3.生活服務 (輸入數字)`, "1");
-            const catMap = {"1":"建築規劃圈", "2":"商業服務圈", "3":"生活服務圈"};
-            const finalCat = catMap[cat] || "未分類";
-            await db.from('industries').insert({name: newName, category: finalCat});
+        if (globalResult.value === 'ADD_NEW_GLOBAL') {
+            const newName = document.getElementById('gridGlobalSearch').value;
+            const cat = prompt("請輸入此新細項所屬的圈子名稱：", "建築規劃圈");
+            await db.from('industries').insert({name: newName, category: cat});
             val = newName;
             await loadIndustries();
         }
         
+        if (!val) return alert("請選擇細項");
         await saveCell(currentEditingId, val);
-        document.getElementById('gridEditModal').style.display = 'none';
+        closeGridEditModal();
     }
 
-    // --- 通用基礎函數 ---
     function renderGridStructure() {
         const el = document.getElementById('mandala');
-        const map = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
                 let cell = document.createElement('div');
-                let isM = (g===4 && c===4), isC = (c===4);
-                cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
                 let div = document.createElement('div'); div.className = 'grid-select';
                 let id = `g${g}-c${c}`; div.dataset.id = id;
-                if(!(g!==4 && c===4)) div.onclick = () => openGridEditModal(id);
+                if(!(g===4 && c===4)) div.onclick = () => openGridEditModal(id);
                 cell.appendChild(div); sub.appendChild(cell);
             }
             el.appendChild(sub);
@@ -274,42 +296,26 @@
             let el = document.querySelector(`[data-id="${item.grid_index}"]`);
             if(el) el.innerText = item.content;
         });
-        syncGridVisuals();
-    }
-
-    function syncGridVisuals() {
-        for(let i=0; i<9; i++) {
-            if(i===4) continue;
-            const map = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
-            let val = gridData[`g4-c${i}`] || '';
-            let el = document.querySelector(`[data-id="g${map[i]}-c4"]`);
-            if(el) el.innerText = val;
-        }
     }
 
     async function saveCell(idx, val) {
         gridData[idx] = val;
         await db.from('user_grids').upsert({member_id: currentMember.id, grid_index: idx, content: val}, {onConflict: 'member_id, grid_index'});
         document.querySelector(`[data-id="${idx}"]`).innerText = val;
-        loadGrid();
     }
 
     async function loadContacts() {
         const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id);
-        const list = document.getElementById('contact-list');
-        list.innerHTML = data?.map(c => `<tr><td>甜蜜區</td><td>${c.name}<br><small>${c.industry}</small></td><td><button onclick="delContact('${c.id}')">✕</button></td></tr>`).join('') || '';
+        document.getElementById('contact-list').innerHTML = data?.map(c => `<tr><td><b>${c.name}</b><br><small>${c.industry}</small></td><td><button onclick="delContact('${c.id}')">✕</button></td></tr>`).join('') || '';
     }
 
     async function addContact() {
         const name = document.getElementById('cName').value;
-        const ind = document.getElementById('cIndustry').value;
-        if(!name || !ind || ind === 'ADD_NEW_CRM') return alert("請填寫完整");
+        const ind = document.getElementById('cIndustry').value || document.getElementById('crmGlobalResult').value;
+        if(!name || !ind) return alert("請填寫完整");
         await db.from('user_contacts').insert({member_id: currentMember.id, owner_name: currentMember.name, name, industry: ind, trust_level:'A', need_level:'X'});
-        document.getElementById('cName').value = "";
         loadContacts();
     }
-
-    async function delContact(id) { if(confirm("刪除？")) { await db.from('user_contacts').delete().eq('id', id); loadContacts(); } }
 
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
@@ -319,6 +325,7 @@
 
     function logout() { location.reload(); }
     function closeGridEditModal() { document.getElementById('gridEditModal').style.display = 'none'; }
+    async function delContact(id) { if(confirm("刪除？")) { await db.from('user_contacts').delete().eq('id', id); loadContacts(); } }
 </script>
 </body>
 </html>
