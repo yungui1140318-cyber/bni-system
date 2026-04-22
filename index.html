@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260421-雲貴戰略版)</title>
+    <title>雲貴人脈系統 (Ver 20260423-搜尋升級版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -95,6 +95,103 @@
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
 
+        /* ===== 關鍵字搜尋元件樣式 ===== */
+        .search-industry-wrapper {
+            position: relative;
+            margin-bottom: 10px;
+        }
+        .search-industry-input {
+            width: 100%;
+            padding: 10px 36px 10px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: "Microsoft JhengHei", sans-serif;
+            flex: none;
+            min-width: unset;
+        }
+        .search-industry-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(207,46,46,0.12);
+        }
+        .search-industry-input::placeholder { color: #aaa; }
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 1rem;
+            padding: 0;
+            display: none;
+            line-height: 1;
+        }
+        .search-clear-btn:hover { color: #666; }
+        .search-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            z-index: 9000;
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+        }
+        .search-dropdown.open { display: block; animation: dropDown 0.15s ease; }
+        @keyframes dropDown { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+        .search-dropdown-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #f5f5f5;
+            transition: background 0.1s;
+        }
+        .search-dropdown-item:last-child { border-bottom: none; }
+        .search-dropdown-item:hover, .search-dropdown-item.focused { background: #fff5f5; }
+        .search-item-cat {
+            font-size: 0.75rem;
+            background: #f0f0f0;
+            color: #666;
+            padding: 2px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .search-item-name {
+            font-size: 0.9rem;
+            color: #333;
+            font-weight: bold;
+        }
+        .search-item-name mark {
+            background: #ffe066;
+            color: #b8860b;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+        .search-no-result {
+            padding: 16px;
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+        .search-hint {
+            font-size: 0.82rem;
+            color: #999;
+            margin-bottom: 6px;
+            padding-left: 2px;
+        }
+
         @media (max-width: 768px) {
             .mandala { grid-template-columns: 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
             .sub-grid { aspect-ratio: auto; min-height: 180px; }
@@ -155,6 +252,17 @@
         <div class="row">
             <input id="cName" placeholder="人脈姓名">
         </div>
+
+        <!-- 關鍵字搜尋區塊 (CRM) -->
+        <div style="background:#fff8f8; padding:10px; border-radius:6px; border:1px solid #f5caca; margin-bottom:10px;">
+            <div class="search-hint">🔍 快速搜尋：輸入關鍵字自動填入下方選單</div>
+            <div class="search-industry-wrapper">
+                <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="例：水電、建材、金融…" autocomplete="off" oninput="onSearchInput('crm')" onkeydown="onSearchKeydown(event,'crm')" onfocus="onSearchFocus('crm')">
+                <button class="search-clear-btn" id="crmSearchClear" onclick="clearSearch('crm')">✕</button>
+                <div class="search-dropdown" id="crmSearchDropdown"></div>
+            </div>
+        </div>
+
         <div class="row" style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #eee;">
             <select id="cCategory" onchange="onCRMCatChange()">
                 <option value="" disabled selected>1. 選擇【雲貴 8 大戰略引薦圈】</option>
@@ -259,8 +367,19 @@
 </div>
 
 <div class="modal-overlay" id="gridEditModal">
-    <div class="modal" style="max-width:320px;">
+    <div class="modal" style="max-width:360px;">
         <h3 style="margin-top:0;">✏️ 編輯產業宮格</h3>
+
+        <!-- 關鍵字搜尋區塊 (Grid) -->
+        <div style="background:#fff8f8; padding:10px; border-radius:6px; border:1px solid #f5caca; margin-bottom:14px;">
+            <div class="search-hint">🔍 快速搜尋：輸入關鍵字自動填入下方選單</div>
+            <div class="search-industry-wrapper" style="margin-bottom:0;">
+                <input type="text" class="search-industry-input" id="gridSearchInput" placeholder="例：水電、建材、金融…" autocomplete="off" oninput="onSearchInput('grid')" onkeydown="onSearchKeydown(event,'grid')" onfocus="onSearchFocus('grid')">
+                <button class="search-clear-btn" id="gridSearchClear" onclick="clearSearch('grid')">✕</button>
+                <div class="search-dropdown" id="gridSearchDropdown"></div>
+            </div>
+        </div>
+
         <div style="margin-bottom:15px;">
             <label style="display:block; font-weight:bold; margin-bottom:5px;">1. 選擇【戰略引薦圈】：</label>
             <select id="gridEditCat" style="width:100%; box-sizing:border-box;" onchange="onGridEditCatChange()"></select>
@@ -287,10 +406,8 @@
             <label style="display:block; font-weight:bold; margin-bottom:5px;">2. 細項名稱：</label>
             <input id="adminEditIndName" style="width:100%; box-sizing:border-box;">
         </div>
-        
         <input type="hidden" id="adminEditIndId">
         <input type="hidden" id="adminEditOldIndName">
-
         <div style="display: flex; justify-content: flex-end; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
             <button class="btn-sm" style="background:#eee; color:#333; margin-right:10px; padding: 8px 12px;" onclick="closeAdminEditModal()">取消</button>
             <button class="btn-sm" style="background:var(--primary-color); color:white; padding: 8px 12px;" onclick="saveAdminEdit()">確認儲存</button>
@@ -309,21 +426,166 @@
     
     let industryMap = {}; 
     let allIndustriesFlat = []; 
-    let newCatSource = ''; 
+
+    // 搜尋狀態
+    const searchState = {
+        crm:  { focusedIndex: -1 },
+        grid: { focusedIndex: -1 }
+    };
 
     if(window.innerWidth < 768) {
         document.getElementById('mobile-hint').style.display = 'block';
     }
 
+    // ===== 關鍵字搜尋核心函式 =====
+
+    function highlightMatch(text, keyword) {
+        if (!keyword) return text;
+        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return text.replace(new RegExp(escaped, 'gi'), m => `<mark>${m}</mark>`);
+    }
+
+    function getSearchItems(keyword) {
+        const kw = keyword.trim().toLowerCase();
+        if (!kw) return [];
+        const results = [];
+        for (const [cat, items] of Object.entries(industryMap)) {
+            for (const item of items) {
+                if (cat.toLowerCase().includes(kw) || item.toLowerCase().includes(kw)) {
+                    results.push({ cat, name: item });
+                }
+            }
+        }
+        return results;
+    }
+
+    function renderDropdown(scope, keyword) {
+        const dropdown = document.getElementById(`${scope}SearchDropdown`);
+        const items = getSearchItems(keyword);
+        searchState[scope].focusedIndex = -1;
+
+        if (!keyword.trim()) {
+            dropdown.innerHTML = '';
+            dropdown.classList.remove('open');
+            return;
+        }
+
+        if (items.length === 0) {
+            dropdown.innerHTML = `<div class="search-no-result">找不到符合「${keyword}」的產業項目</div>`;
+            dropdown.classList.add('open');
+            return;
+        }
+
+        dropdown.innerHTML = items.map((item, idx) =>
+            `<div class="search-dropdown-item" data-idx="${idx}" onclick="selectSearchItem('${scope}', '${escJs(item.cat)}', '${escJs(item.name)}')">
+                <span class="search-item-cat">${item.cat}</span>
+                <span class="search-item-name">${highlightMatch(item.name, keyword)}</span>
+            </div>`
+        ).join('');
+        dropdown.classList.add('open');
+    }
+
+    function escJs(str) {
+        return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function onSearchInput(scope) {
+        const input = document.getElementById(`${scope}SearchInput`);
+        const clearBtn = document.getElementById(`${scope}SearchClear`);
+        clearBtn.style.display = input.value ? 'block' : 'none';
+        renderDropdown(scope, input.value);
+    }
+
+    function onSearchFocus(scope) {
+        const input = document.getElementById(`${scope}SearchInput`);
+        if (input.value.trim()) renderDropdown(scope, input.value);
+    }
+
+    function onSearchKeydown(e, scope) {
+        const dropdown = document.getElementById(`${scope}SearchDropdown`);
+        const items = dropdown.querySelectorAll('.search-dropdown-item');
+        if (!items.length) return;
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            searchState[scope].focusedIndex = Math.min(searchState[scope].focusedIndex + 1, items.length - 1);
+            updateFocus(scope, items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            searchState[scope].focusedIndex = Math.max(searchState[scope].focusedIndex - 1, 0);
+            updateFocus(scope, items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (searchState[scope].focusedIndex >= 0 && items[searchState[scope].focusedIndex]) {
+                items[searchState[scope].focusedIndex].click();
+            }
+        } else if (e.key === 'Escape') {
+            closeDropdown(scope);
+        }
+    }
+
+    function updateFocus(scope, items) {
+        items.forEach((el, i) => {
+            el.classList.toggle('focused', i === searchState[scope].focusedIndex);
+            if (i === searchState[scope].focusedIndex) el.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
+    function clearSearch(scope) {
+        const input = document.getElementById(`${scope}SearchInput`);
+        input.value = '';
+        document.getElementById(`${scope}SearchClear`).style.display = 'none';
+        closeDropdown(scope);
+        input.focus();
+    }
+
+    function closeDropdown(scope) {
+        const dropdown = document.getElementById(`${scope}SearchDropdown`);
+        dropdown.classList.remove('open');
+        searchState[scope].focusedIndex = -1;
+    }
+
+    // 點擊搜尋結果 → 填入對應選單
+    function selectSearchItem(scope, cat, name) {
+        // 更新搜尋欄顯示
+        const input = document.getElementById(`${scope}SearchInput`);
+        input.value = `${cat} › ${name}`;
+        document.getElementById(`${scope}SearchClear`).style.display = 'block';
+        closeDropdown(scope);
+
+        if (scope === 'crm') {
+            // 填入 CRM 選單
+            const catSel = document.getElementById('cCategory');
+            safelySetSelectValue(catSel, cat);
+            updateSubIndustrySelect();
+            setTimeout(() => {
+                const subSel = document.getElementById('cIndustry');
+                safelySetSelectValue(subSel, name);
+            }, 50);
+        } else if (scope === 'grid') {
+            // 填入 81 宮格 modal 選單
+            const catSel = document.getElementById('gridEditCat');
+            safelySetSelectValue(catSel, cat);
+            updateGridEditSubSelect(name);
+        }
+    }
+
+    // 點擊外部關閉下拉
+    document.addEventListener('click', function(e) {
+        ['crm', 'grid'].forEach(scope => {
+            const wrapper = document.getElementById(`${scope}SearchInput`);
+            const dropdown = document.getElementById(`${scope}SearchDropdown`);
+            if (wrapper && !wrapper.contains(e.target) && dropdown && !dropdown.contains(e.target)) {
+                closeDropdown(scope);
+            }
+        });
+    });
+
+    // ===== 以下為原有功能（完整保留）=====
+
     function safelySetSelectValue(selectElement, value) {
-        if (!value || typeof value !== 'string' || value.trim() === "") {
-            selectElement.value = "";
-            return;
-        }
-        if (value === "(空)" || value === "...") {
-            selectElement.value = "";
-            return;
-        }
+        if (!value || typeof value !== 'string' || value.trim() === "") { selectElement.value = ""; return; }
+        if (value === "(空)" || value === "...") { selectElement.value = ""; return; }
         let exists = Array.from(selectElement.options).some(opt => opt.value === value);
         if (!exists) {
             let opt = document.createElement('option');
@@ -345,10 +607,8 @@
 
     async function loadIndustries() {
         let { data, error } = await db.from('industries').select('category, name, id').order('category').order('name');
-        
         industryMap = {};
         allIndustriesFlat = [];
-
         if (data) {
             data.forEach(row => {
                 let cat = row.category || "未分類";
@@ -369,122 +629,73 @@
         for (const cat of Object.keys(industryMap)) {
             html += `<option value="${cat}">${cat}</option>`;
         }
-        // [防呆機制] 關閉後台的新增大分類功能
-        // html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
-        
         selects.forEach(sel => {
             if(!sel) return;
             let currentVal = sel.value;
             sel.innerHTML = html;
-            if(currentVal && currentVal !== 'ADD_NEW_CAT' && industryMap[currentVal] !== undefined) {
-                sel.value = currentVal;
-            }
+            if(currentVal && currentVal !== 'ADD_NEW_CAT' && industryMap[currentVal] !== undefined) sel.value = currentVal;
         });
     }
 
-    function onAdminAddCatChange() {
-        // 功能已鎖定，無動作
-    }
-
-    function onAdminEditCatChange() {
-        // 功能已鎖定，無動作
-    }
+    function onAdminAddCatChange() {}
+    function onAdminEditCatChange() {}
 
     function setupRealtime() {
         db.channel('public:industries')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'industries' }, async (payload) => {
-              console.log('偵測到產業資料變動，背景自動更新中...');
-              
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'industries' }, async () => {
               const modalCat = document.getElementById('gridEditCat') ? document.getElementById('gridEditCat').value : null;
               const modalInd = document.getElementById('gridEditInd') ? document.getElementById('gridEditInd').value : null;
-              
               await loadIndustries();
-              
-              if (document.getElementById('admin-view').classList.contains('active')) {
-                  loadAdminIndustries();
-              }
-              
+              if (document.getElementById('admin-view').classList.contains('active')) loadAdminIndustries();
               if (document.getElementById('gridEditModal').style.display === 'flex') {
                   if (modalCat && modalCat !== 'ADD_NEW_CAT') document.getElementById('gridEditCat').value = modalCat;
                   updateGridEditSubSelect();
                   if (modalInd && modalInd !== 'ADD_NEW_IND') document.getElementById('gridEditInd').value = modalInd;
               }
-          })
-          .subscribe();
+          }).subscribe();
     }
 
     function initCRMCategorySelect() {
         const catSelect = document.getElementById('cCategory');
-        const currentCat = catSelect.value; 
-
+        const currentCat = catSelect.value;
         let html = `<option value="" disabled selected>1. 選擇【雲貴 8 大戰略引薦圈】</option>`;
         for (const cat of Object.keys(industryMap)) {
             html += `<option value="${cat}">${cat}</option>`;
         }
-        // [防呆機制] 關閉 CRM 頁面的新增大分類功能
-        // html += `<option value="ADD_NEW_CRM_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【戰略引薦圈】...</option>`;
         catSelect.innerHTML = html;
-
-        if (currentCat && industryMap[currentCat]) {
-            catSelect.value = currentCat;
-        }
-        
+        if (currentCat && industryMap[currentCat]) catSelect.value = currentCat;
         updateSubIndustrySelect(true); 
     }
 
-    function onCRMCatChange() {
-        updateSubIndustrySelect();
-    }
+    function onCRMCatChange() { updateSubIndustrySelect(); }
 
     function updateSubIndustrySelect(isBackgroundUpdate = false) {
         const cat = document.getElementById('cCategory').value;
         const subSelect = document.getElementById('cIndustry');
-        const currentSub = subSelect.value; 
-
+        const currentSub = subSelect.value;
         if (!cat || !industryMap[cat] || cat === "ADD_NEW_CRM_CAT") {
             subSelect.innerHTML = `<option value="" disabled selected>無資料</option>`;
             return;
         }
         let html = `<option value="" disabled selected>2. 選擇細項</option>`;
-        industryMap[cat].forEach(item => {
-            html += `<option value="${item}">${item}</option>`;
-        });
+        industryMap[cat].forEach(item => { html += `<option value="${item}">${item}</option>`; });
         html += `<option value="ADD_NEW_CRM" style="color:var(--primary-color); font-weight:bold;">➕ 新增至此分類...</option>`;
         subSelect.innerHTML = html;
-
-        if (isBackgroundUpdate && currentSub && industryMap[cat].includes(currentSub)) {
-            subSelect.value = currentSub;
-        }
+        if (isBackgroundUpdate && currentSub && industryMap[cat].includes(currentSub)) subSelect.value = currentSub;
     }
 
     async function handleNewIndustry(name, category) {
         name = name ? name.trim() : "";
         category = category ? category.trim() : "未分類";
-        
-        if (name === "") {
-            alert("細項名稱不能為空！");
-            return null;
-        }
-
-        if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) {
-            alert("此產業細項已存在！");
-            return name; 
-        }
-
+        if (name === "") { alert("細項名稱不能為空！"); return null; }
+        if (allIndustriesFlat.some(i => i.toLowerCase() === name.toLowerCase())) { alert("此產業細項已存在！"); return name; }
         await db.from('industries').insert({ name: name, category: category });
-        
         if (!industryMap[category]) industryMap[category] = [];
-        if (!industryMap[category].includes(name)) {
-            industryMap[category].push(name);
-            allIndustriesFlat.push(name);
-        }
-        
-        initCRMCategorySelect(); 
+        if (!industryMap[category].includes(name)) { industryMap[category].push(name); allIndustriesFlat.push(name); }
+        initCRMCategorySelect();
         updateAdminCatSelect();
-        
         const crmCat = document.getElementById('cCategory').value;
         if(crmCat === category) updateSubIndustrySelect();
-
         return name;
     }
 
@@ -492,52 +703,35 @@
 
     function openGridEditModal(id) {
         currentEditingGridId = id;
+        // 重置搜尋框
+        clearSearch('grid');
         document.getElementById('gridEditModal').style.display = 'flex';
-
         let currentVal = gridData[id] || "";
         let currentCat = getCategoryOfIndustry(currentVal);
-
         let catSelect = document.getElementById('gridEditCat');
         let html = `<option value="" disabled selected>請選擇【雲貴 8 大戰略引薦圈】...</option>`;
-        for (const cat of Object.keys(industryMap)) {
-            html += `<option value="${cat}">${cat}</option>`;
-        }
-        // [防呆機制] 關閉 81 宮格的新增大分類功能
-        // html += `<option value="ADD_NEW_CAT" style="color:var(--primary-color); font-weight:bold;">➕ 新增【大分類】...</option>`;
+        for (const cat of Object.keys(industryMap)) { html += `<option value="${cat}">${cat}</option>`; }
         catSelect.innerHTML = html;
         catSelect.value = currentCat || "";
-
         updateGridEditSubSelect(currentVal);
     }
 
     function updateGridEditSubSelect(selectedSub = "") {
         let cat = document.getElementById('gridEditCat').value;
         let subSelect = document.getElementById('gridEditInd');
-
         if (!cat || cat === "ADD_NEW_CAT") {
             subSelect.innerHTML = `<option value="" disabled selected>請先選擇上方戰略引薦圈</option>`;
             return;
         }
-
         let html = `<option value="" disabled selected>請選擇細項...</option>`;
-        if (industryMap[cat]) {
-            industryMap[cat].forEach(item => {
-                html += `<option value="${item}">${item}</option>`;
-            });
-        }
+        if (industryMap[cat]) { industryMap[cat].forEach(item => { html += `<option value="${item}">${item}</option>`; }); }
         html += `<option value="ADD_NEW_IND" style="color:var(--primary-color); font-weight:bold;">➕ 新增【細項】...</option>`;
         subSelect.innerHTML = html;
-
-        if (selectedSub && industryMap[cat] && industryMap[cat].includes(selectedSub)) {
-            subSelect.value = selectedSub;
-        } else {
-            subSelect.value = "";
-        }
+        if (selectedSub && industryMap[cat] && industryMap[cat].includes(selectedSub)) subSelect.value = selectedSub;
+        else subSelect.value = "";
     }
 
-    function onGridEditCatChange() {
-        updateGridEditSubSelect();
-    }
+    function onGridEditCatChange() { updateGridEditSubSelect(); }
 
     async function onGridEditIndChange() {
         let subSelect = document.getElementById('gridEditInd');
@@ -548,29 +742,22 @@
                 document.getElementById('loading').style.display = 'block';
                 let savedName = await handleNewIndustry(newInd, cat);
                 document.getElementById('loading').style.display = 'none';
-                if (savedName) {
-                    updateGridEditSubSelect(savedName);
-                } else {
-                    subSelect.value = "";
-                }
-            } else {
-                subSelect.value = "";
-            }
+                if (savedName) updateGridEditSubSelect(savedName);
+                else subSelect.value = "";
+            } else { subSelect.value = ""; }
         }
     }
 
     function closeGridEditModal() {
         document.getElementById('gridEditModal').style.display = 'none';
         currentEditingGridId = null;
+        clearSearch('grid');
     }
 
     async function saveGridEdit() {
         let subSelect = document.getElementById('gridEditInd');
         let val = subSelect.value;
-        if (!val || val === 'ADD_NEW_IND') {
-            alert("請完整選擇引薦圈與細項！");
-            return;
-        }
+        if (!val || val === 'ADD_NEW_IND') { alert("請完整選擇引薦圈與細項！"); return; }
         await saveCell(currentEditingGridId, val);
         closeGridEditModal();
     }
@@ -578,15 +765,12 @@
     async function onCRMSelectChange() {
         const subSelect = document.getElementById('cIndustry');
         if (subSelect.value === 'ADD_NEW_CRM') {
-            const cat = document.getElementById('cCategory').value; 
+            const cat = document.getElementById('cCategory').value;
             let newName = prompt(`您正在新增【${cat}】類別下的項目，請輸入名稱：`);
-            
             if (newName && newName.trim() !== "") {
                 let savedName = await handleNewIndustry(newName, cat);
                 subSelect.value = savedName;
-            } else {
-                subSelect.value = "";
-            }
+            } else { subSelect.value = ""; }
         }
     }
     document.getElementById('cIndustry').addEventListener('change', onCRMSelectChange);
@@ -594,33 +778,20 @@
     async function login() {
         const name = document.getElementById('loginName').value.trim();
         const pwd = document.getElementById('loginPwd').value.trim();
-        
         if (!name || !pwd) return alert("請輸入帳號與密碼");
         document.getElementById('loading').style.display = 'block';
-
         let { data: member, error } = await db.from('members').select('*').eq('name', name).eq('password', pwd).single();
-
-        if (error || !member) {
-            document.getElementById('loading').style.display = 'none';
-            return alert("帳號或密碼錯誤");
-        }
-
+        if (error || !member) { document.getElementById('loading').style.display = 'none'; return alert("帳號或密碼錯誤"); }
         currentMember = member;
         document.getElementById('displayUser').innerText = `${member.name} (登出)`;
         document.getElementById('identity-overlay').style.opacity = '0';
         setTimeout(() => document.getElementById('identity-overlay').style.display = 'none', 500);
-
-        if(member.role === 'admin') {
-            document.getElementById('adminTabBtn').style.display = 'inline-block';
-        }
-
+        if(member.role === 'admin') document.getElementById('adminTabBtn').style.display = 'inline-block';
         renderGridStructure();  
         await loadIndustries(); 
         await loadGrid();       
         await loadContacts();   
-        
         setupRealtime();
-        
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -632,21 +803,12 @@
         const list = document.getElementById('member-list');
         list.innerHTML = '';
         data.forEach(m => {
-            if(m.role === 'admin' && m.name === 'admin') return; 
-            
+            if(m.role === 'admin' && m.name === 'admin') return;
             let roleBadge = m.role === 'admin' ? '🔴 管理員' : '🔵 會員';
             let toggleBtn = m.role === 'admin' 
                 ? `<button class="btn-sm btn-untoggle" onclick="toggleRole('${m.id}', 'user', '${m.name}')">降為會員</button>`
                 : `<button class="btn-sm btn-toggle" onclick="toggleRole('${m.id}', 'admin', '${m.name}')">升為管理員</button>`;
-
-            list.innerHTML += `
-                <tr>
-                    <td>${m.name}</td>
-                    <td><b>${roleBadge}</b></td>
-                    <td>${toggleBtn}</td>
-                    <td><button class="btn-sm btn-edit" onclick="resetPwd('${m.id}', '${m.name}')">重設密碼</button></td>
-                    <td><button class="btn-sm btn-del" onclick="deleteMember('${m.id}', '${m.name}')">刪除</button></td>
-                </tr>`;
+            list.innerHTML += `<tr><td>${m.name}</td><td><b>${roleBadge}</b></td><td>${toggleBtn}</td><td><button class="btn-sm btn-edit" onclick="resetPwd('${m.id}', '${m.name}')">重設密碼</button></td><td><button class="btn-sm btn-del" onclick="deleteMember('${m.id}', '${m.name}')">刪除</button></td></tr>`;
         });
     }
 
@@ -694,16 +856,7 @@
                 let dispName = ind.name ? ind.name : '<span style="color:#999; font-style:italic;">(資料異常：無細項)</span>';
                 let safeName = ind.name ? ind.name.replace(/'/g, "\\'") : '';
                 let safeCat = catText.replace(/'/g, "\\'");
-
-                list.innerHTML += `
-                    <tr>
-                        <td>${catText}</td>
-                        <td>${dispName}</td>
-                        <td>
-                            <button class="btn-sm btn-edit" onclick="openAdminEditModal('${ind.id}', '${safeCat}', '${safeName}')">修改</button>
-                            <button class="btn-sm btn-del" onclick="deleteIndustry('${ind.id}', '${safeName}')">刪除</button>
-                        </td>
-                    </tr>`;
+                list.innerHTML += `<tr><td>${catText}</td><td>${dispName}</td><td><button class="btn-sm btn-edit" onclick="openAdminEditModal('${ind.id}', '${safeCat}', '${safeName}')">修改</button><button class="btn-sm btn-del" onclick="deleteIndustry('${ind.id}', '${safeName}')">刪除</button></td></tr>`;
             });
         }
         document.getElementById('loading').style.display = 'none';
@@ -714,13 +867,11 @@
         let name = document.getElementById('newAdminInd').value.trim();
         if(!cat || cat === 'ADD_NEW_CAT') return alert("請選擇大分類");
         if(!name) return alert("請務必填寫細項名稱！");
-        
         document.getElementById('loading').style.display = 'block';
         await handleNewIndustry(name, cat);
         document.getElementById('newAdminCat').value = '';
         document.getElementById('newAdminInd').value = '';
         document.getElementById('loading').style.display = 'none';
-        
         loadAdminIndustries(); 
     }
 
@@ -732,33 +883,25 @@
         document.getElementById('adminEditIndModal').style.display = 'flex';
     }
 
-    function closeAdminEditModal() {
-        document.getElementById('adminEditIndModal').style.display = 'none';
-    }
+    function closeAdminEditModal() { document.getElementById('adminEditIndModal').style.display = 'none'; }
 
     async function saveAdminEdit() {
         let id = document.getElementById('adminEditIndId').value;
         let oldName = document.getElementById('adminEditOldIndName').value;
         let newCat = document.getElementById('adminEditCat').value;
         let newName = document.getElementById('adminEditIndName').value.trim();
-        
         if(!newCat || newCat === 'ADD_NEW_CAT') return alert("請選擇大分類");
         if(!newName) return alert("細項名稱不能留空！");
-
         document.getElementById('loading').style.display = 'block';
-        
         await db.from('industries').update({ category: newCat, name: newName }).eq('id', id);
-        
         if (oldName !== "" && newName !== oldName) {
             await db.from('user_grids').update({ content: newName }).eq('content', oldName);
             await db.from('user_contacts').update({ industry: newName }).eq('industry', oldName);
         }
-
         await loadIndustries();
         await loadAdminIndustries();
         await loadGrid();
         await loadContacts();
-
         closeAdminEditModal();
         document.getElementById('loading').style.display = 'none';
         alert("修改並同步更新完成！");
@@ -769,8 +912,8 @@
         if(!confirm(msg)) return;
         document.getElementById('loading').style.display = 'block';
         await db.from('industries').delete().eq('id', id);
-        await loadIndustries(); 
-        await loadAdminIndustries(); 
+        await loadIndustries();
+        await loadAdminIndustries();
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -778,26 +921,19 @@
 
     function renderGridStructure() {
         const el = document.getElementById('mandala');
-        if(el.innerHTML) return; 
-        
+        if(el.innerHTML) return;
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className='sub-grid';
             for(let c=0; c<9; c++) {
-                let cell = document.createElement('div'); 
-                let isM = (g===4 && c===4), isC = (c===4); 
+                let cell = document.createElement('div');
+                let isM = (g===4 && c===4), isC = (c===4);
                 cell.className = `cell ${isM?'master':''} ${isC?'core':''}`;
-                
                 let div = document.createElement('div');
                 div.className = 'grid-select';
                 let id = `g${g}-c${c}`;
                 div.dataset.id = id;
-                
-                if(g!==4 && c===4) {
-                    div.style.pointerEvents = 'none'; 
-                } else {
-                    div.onclick = () => openGridEditModal(id);
-                }
-                
+                if(g!==4 && c===4) { div.style.pointerEvents = 'none'; }
+                else { div.onclick = () => openGridEditModal(id); }
                 cell.appendChild(div);
                 sub.appendChild(cell);
             }
@@ -820,28 +956,24 @@
     async function saveCell(index, content) {
         gridData[index] = content;
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: index, content: content }, { onConflict: 'member_id, grid_index' });
-
         let currentEl = document.querySelector(`.grid-select[data-id="${index}"]`);
         if(currentEl) currentEl.innerText = content;
-
         if(index.startsWith('g4-')) {
-            let col = parseInt(index.split('c')[1]); 
+            let col = parseInt(index.split('c')[1]);
             if (col !== 4) {
                 let outerGridId = mapCenterToOuter[col];
                 let targetId = `g${outerGridId}-c4`;
-                
                 let targetEl = document.querySelector(`.grid-select[data-id="${targetId}"]`);
                 if(targetEl) targetEl.innerText = content;
-                
                 gridData[targetId] = content;
                 await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: targetId, content: content }, { onConflict: 'member_id, grid_index' });
             }
         }
     }
-    
+
     function syncGridVisualsOnly() {
         for(let i=0; i<9; i++) {
-            if(i === 4) continue; 
+            if(i === 4) continue;
             let centerVal = gridData[`g4-c${i}`] || '';
             let targetId = `g${mapCenterToOuter[i]}-c4`;
             let el = document.querySelector(`.grid-select[data-id="${targetId}"]`);
@@ -852,51 +984,25 @@
     async function loadMatches() {
         const resDiv = document.getElementById('match-results');
         resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">🔍 搜尋資源中...</div>';
-
         let uniqueNeeds = new Set();
         for(let g=0; g<9; g++) {
             for(let c=0; c<9; c++) {
-                if (g === 4 && c === 4) continue; 
+                if (g === 4 && c === 4) continue;
                 let val = gridData[`g${g}-c${c}`];
-                if(val && val.trim() !== '') {
-                    uniqueNeeds.add(val);
-                }
+                if(val && val.trim() !== '') uniqueNeeds.add(val);
             }
         }
         myNeeds = Array.from(uniqueNeeds);
-
-        if(myNeeds.length === 0) {
-            resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」中選擇您的需求產業。</div>';
-            return;
-        }
-
+        if(myNeeds.length === 0) { resDiv.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">請先在「產業鏈 81 宮格」中選擇您的需求產業。</div>'; return; }
         let html = '';
         let foundCount = 0;
-
         for (let need of myNeeds) {
-            const { data } = await db.from('user_contacts')
-                .select('*')
-                .neq('member_id', currentMember.id) 
-                .eq('industry', need); 
-
+            const { data } = await db.from('user_contacts').select('*').neq('member_id', currentMember.id).eq('industry', need);
             if(data && data.length > 0) {
                 foundCount += data.length;
                 data.forEach(c => {
                     let isSweet = (c.trust_level === 'A' || c.trust_level === 'B');
-                    html += `
-                        <div class="match-card ${isSweet ? 'sweet' : ''}">
-                            <div class="match-info">
-                                <h4>${c.name} (${c.industry})</h4>
-                                <p>擁有者: <b>${c.owner_name}</b></p>
-                            </div>
-                            <div class="match-meta">
-                                <span class="match-tag">需求: ${need}</span><br>
-                                <span style="font-weight:bold; color:${isSweet?'#d32f2f':'#666'}">
-                                    信任: ${c.trust_level} / 需求: ${c.need_level}
-                                </span>
-                            </div>
-                        </div>
-                    `;
+                    html += `<div class="match-card ${isSweet ? 'sweet' : ''}"><div class="match-info"><h4>${c.name} (${c.industry})</h4><p>擁有者: <b>${c.owner_name}</b></p></div><div class="match-meta"><span class="match-tag">需求: ${need}</span><br><span style="font-weight:bold; color:${isSweet?'#d32f2f':'#666'}">信任: ${c.trust_level} / 需求: ${c.need_level}</span></div></div>`;
                 });
             }
         }
@@ -905,7 +1011,7 @@
 
     async function loadContacts() {
         const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id).order('created_at', { ascending: false });
-        myContacts = data || []; 
+        myContacts = data || [];
         renderContactList();
     }
 
@@ -916,14 +1022,7 @@
             let strategy = getStrategy(c.trust_level, c.need_level);
             let logCount = c.logs ? c.logs.length : 0;
             let logBtnText = logCount > 0 ? `📝 紀錄 (${logCount})` : `📝 紀錄`;
-
-            list.innerHTML += `
-                <tr>
-                    <td><span class="tag ${strategy.class}">${strategy.text}</span></td>
-                    <td><b>${c.name}</b><br><small style="color:#666">${c.industry}</small></td>
-                    <td><button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index})">${logBtnText}</button></td>
-                    <td><button onclick="delContact('${c.id}')" style="color:#f44336;border:none;background:none;cursor:pointer">✕</button></td>
-                </tr>`;
+            list.innerHTML += `<tr><td><span class="tag ${strategy.class}">${strategy.text}</span></td><td><b>${c.name}</b><br><small style="color:#666">${c.industry}</small></td><td><button class="btn-sm" style="background:#e3f2fd; color:#1565c0; border:1px solid #90caf9;" onclick="openLogModal(${index})">${logBtnText}</button></td><td><button onclick="delContact('${c.id}')" style="color:#f44336;border:none;background:none;cursor:pointer">✕</button></td></tr>`;
         });
     }
 
@@ -936,19 +1035,14 @@
 
     async function addContact() {
         const name = document.getElementById('cName').value;
-        const ind = document.getElementById('cIndustry').value; 
+        const ind = document.getElementById('cIndustry').value;
         if(!name || !ind || ind.startsWith('ADD_NEW') || ind === "") return alert("請填寫完整資訊，並確保已選擇產業細項");
-        
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').insert({
             member_id: currentMember.id, owner_name: currentMember.name, name: name, industry: ind,
-            trust_level: document.getElementById('cTrust').value, need_level: document.getElementById('cNeed').value,
-            logs: []
+            trust_level: document.getElementById('cTrust').value, need_level: document.getElementById('cNeed').value, logs: []
         });
-        if(!error) {
-            document.getElementById('cName').value = ''; 
-            await loadContacts();
-        }
+        if(!error) { document.getElementById('cName').value = ''; clearSearch('crm'); await loadContacts(); }
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -964,29 +1058,18 @@
         editingContactIdx = cIdx;
         const contact = myContacts[cIdx];
         document.getElementById('modalTitle').innerText = `面談紀錄：${contact.name}`;
-        
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         document.getElementById('logDate').value = now.toISOString().slice(0, 16);
         document.getElementById('logContent').value = '';
-
         const container = document.getElementById('logHistoryContainer');
         if(contact.logs && contact.logs.length > 0) {
             let html = '';
             contact.logs.forEach((l, idx) => {
-                html += `
-                    <div class="log-entry">
-                        <span class="log-date">
-                            ${l.date} 
-                            <span style="cursor:pointer; color:red;" onclick="deleteLog(${cIdx}, ${idx})">✕ 刪除</span>
-                        </span>
-                        <div style="margin-top:4px; color:#333;">${l.content}</div>
-                    </div>`;
+                html += `<div class="log-entry"><span class="log-date">${l.date} <span style="cursor:pointer; color:red;" onclick="deleteLog(${cIdx}, ${idx})">✕ 刪除</span></span><div style="margin-top:4px; color:#333;">${l.content}</div></div>`;
             });
             container.innerHTML = html;
-        } else {
-            container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">目前無紀錄</div>';
-        }
+        } else { container.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">目前無紀錄</div>'; }
         document.getElementById('logModal').style.display = 'flex';
     }
 
@@ -997,15 +1080,12 @@
         let dateVal = document.getElementById('logDate').value.replace('T', ' ');
         let content = document.getElementById('logContent').value;
         if(!content) return alert("請輸入內容");
-        
         let contact = myContacts[editingContactIdx];
         let logs = contact.logs || [];
         logs.unshift({ date: dateVal, content: content });
-        
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
-        
-        if(error) { alert("儲存失敗"); } 
+        if(error) { alert("儲存失敗"); }
         else { contact.logs = logs; openLogModal(editingContactIdx); renderContactList(); }
         document.getElementById('loading').style.display = 'none';
     }
@@ -1015,7 +1095,6 @@
         let contact = myContacts[cIdx];
         let logs = contact.logs;
         logs.splice(lIdx, 1);
-        
         document.getElementById('loading').style.display = 'block';
         const { error } = await db.from('user_contacts').update({ logs: logs }).eq('id', contact.id);
         if(!error) { openLogModal(cIdx); renderContactList(); }
@@ -1025,25 +1104,10 @@
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        if(t==='grid') { 
-            document.getElementById('grid-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[0].classList.add('active'); 
-        }
-        else if(t==='matches') { 
-            document.getElementById('matches-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[1].classList.add('active'); 
-            loadMatches(); 
-        }
-        else if(t==='crm') { 
-            document.getElementById('crm-view').classList.add('active'); 
-            document.querySelectorAll('.tab-btn')[2].classList.add('active'); 
-        }
-        else if(t==='admin') { 
-            document.getElementById('admin-view').classList.add('active'); 
-            document.getElementById('adminTabBtn').classList.add('active'); 
-            loadMembers(); 
-            loadAdminIndustries(); 
-        }
+        if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
+        else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
+        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
+        else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); loadMembers(); loadAdminIndustries(); }
     }
 </script>
 </body>
