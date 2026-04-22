@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260423-穩健搜尋版)</title>
+    <title>雲貴人脈系統 (Ver 20260423-絕對修復版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -16,20 +16,18 @@
         .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; outline: none; }
         .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
         
-        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
         .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
         .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; white-space: nowrap; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 80px; display: inline-block; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 95px; display: inline-block; }
         .tab-btn.active { background: var(--primary-color); color: white; }
         .tab-btn-admin { display: none; color: #d32f2f; } 
-        .tab-btn-admin.active { background: #333; color: white; }
 
         .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
         .container.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
@@ -40,30 +38,23 @@
         .grid-select { 
             width: 100%; height: 100%; border: none; outline: none; background: transparent; 
             text-align: center; display: flex; align-items: center; justify-content: center; 
-            font-size: 0.85rem; cursor: pointer; padding: 4px; box-sizing: border-box;
-            word-break: break-all;
+            font-size: 0.85rem; cursor: pointer; padding: 4px; box-sizing: border-box; word-break: break-all;
         }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.95rem; }
 
-        /* CRM Form */
-        .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-        input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
-        .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-
         /* Search Module CSS */
         .search-container { position: relative; width: 100%; margin-bottom: 10px; }
-        .search-input { width: 100%; padding: 12px; border: 2px solid var(--primary-color); border-radius: 8px; box-sizing: border-box; outline: none; }
+        .search-input { width: 100%; padding: 12px; border: 2px solid var(--primary-color); border-radius: 8px; box-sizing: border-box; outline: none; font-size: 0.95rem; }
         .search-results { 
             position: absolute; top: 100%; left: 0; width: 100%; background: white; 
             border: 1px solid #ccc; z-index: 1000; max-height: 150px; overflow-y: auto; display: none;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-radius: 0 0 8px 8px;
         }
-        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 0.9rem; text-align: left; }
         .search-item:hover { background: #f0f2f5; }
 
-        /* Admin Table */
+        /* Table & Admin */
         .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; border-radius: 8px; overflow: hidden; }
         .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; }
@@ -71,12 +62,15 @@
         .btn-del { background: #f44336; color: white; }
         .tag { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
         .tag-pink { background: #fce4ec; color: #c2185b; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
+        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
     </style>
 </head>
 <body>
 
-<div id="loading" style="position:fixed; top:15px; right:15px; background:rgba(0,0,0,0.8); color:white; padding:6px 15px; border-radius:20px; display:none; z-index:20000;">處理中...</div>
-
+<div id="loading">處理中...</div>
 <div id="identity-overlay">
     <div class="box">
         <h2>雲貴人脈系統</h2>
@@ -86,10 +80,7 @@
     </div>
 </div>
 
-<header>
-    <h1>雲貴人脈庫</h1>
-    <span class="user-tag" id="displayUser" onclick="logout()">登出</span>
-</header>
+<header><h1>雲貴人脈庫</h1><span class="user-tag" id="displayUser" onclick="logout()">登出</span></header>
 
 <div class="tabs-container">
     <div class="tabs">
@@ -104,29 +95,29 @@
 <div id="matches-view" class="container"><div id="match-results"></div></div>
 
 <div id="crm-view" class="container">
-    <div class="crm-form">
+    <div style="background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px;">
         <div class="search-container">
-            <input type="text" class="search-input" id="crmSearch" placeholder="🔍 全域搜尋產業關鍵字..." oninput="handleGlobalSearch(this, 'crm')">
+            <input type="text" class="search-input" id="crmSearch" placeholder="🔍 全域搜尋產業關鍵字 (例：水電、冷氣)..." oninput="handleGlobalSearch(this, 'crm')">
             <div id="crmSearchResults" class="search-results"></div>
         </div>
-        <div class="row"><input id="cName" placeholder="人脈姓名"></div>
-        <div class="row" style="background:#f8f9fa; padding:10px; border-radius:6px;">
-            <select id="cCategory" onchange="onCRMCatChange()"></select>
-            <select id="cIndustry"></select>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+            <input id="cName" placeholder="人脈姓名" style="flex: 1.5; padding: 10px; border: 1px solid #ccc; border-radius: 6px;">
+            <select id="cCategory" onchange="onCRMCatChange()" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"></select>
+            <select id="cIndustry" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"></select>
         </div>
-        <div class="row">
-            <select id="cTrust"><option value="A">A.極熟悉</option><option value="B">B.不錯</option><option value="C">C.不熟</option><option value="D">D.陌生</option></select>
-            <select id="cNeed"><option value="X">X-急需</option><option value="Y">Y-有需求</option><option value="Z">Z-不了解</option></select>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <select id="cTrust" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"><option value="A">A.極熟悉</option><option value="B">B.不錯</option><option value="C">C.不熟</option><option value="D">D.陌生</option></select>
+            <select id="cNeed" style="flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px;"><option value="X">X-急需</option><option value="Y">Y-有需求</option><option value="Z">Z-不了解</option></select>
         </div>
-        <button class="btn-main" onclick="addContact()">新增人脈資源</button>
+        <button onclick="addContact()" style="width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">新增人脈資源</button>
     </div>
-    <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>策略</th><th>姓名/產業</th><th>✕</th></tr></thead><tbody id="contact-list"></tbody></table></div>
+    <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>策略</th><th>資訊</th><th>操作</th></tr></thead><tbody id="contact-list"></tbody></table></div>
 </div>
 
 <div id="admin-view" class="container">
     <div style="background:white; padding:15px; border-radius:8px; margin-bottom:20px;">
         <h3>👥 人員管理中心</h3>
-        <table class="std-table"><thead><tr><th>姓名</th><th>狀態</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table>
+        <table class="std-table"><thead><tr><th>姓名</th><th>角色</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table>
     </div>
     <div style="background:white; padding:15px; border-radius:8px;">
         <h3>🏷️ 產業分類管理</h3>
@@ -135,7 +126,7 @@
 </div>
 
 <div class="modal-overlay" id="gridEditModal">
-    <div class="modal" style="background:white; padding:20px; border-radius:8px; width:90%; max-width:350px;">
+    <div class="modal">
         <h3>✏️ 編輯產業宮格</h3>
         <div class="search-container">
             <input type="text" class="search-input" id="gridSearch" placeholder="🔍 快速搜尋產業..." oninput="handleGlobalSearch(this, 'grid')">
@@ -152,13 +143,20 @@
     const db = createClient(SUPABASE_URL, SUPABASE_KEY);
     let currentMember = null, industryMap = {}, gridData = {}, currentEditingGridId = null;
 
+    // --- 登入邏輯 (完全恢復穩定版神經) ---
     async function login() {
-        const n = document.getElementById('loginName').value.trim(), p = document.getElementById('loginPwd').value.trim();
+        const n = document.getElementById('loginName').value.trim();
+        const p = document.getElementById('loginPwd').value.trim();
+        if (!n || !p) return alert("請輸入帳號密碼");
         document.getElementById('loading').style.display = 'block';
         const { data: member, error } = await db.from('members').select('*').eq('name', n).eq('password', p).single();
-        if (error || !member) { document.getElementById('loading').style.display = 'none'; return alert("錯誤"); }
         
-        currentMember = member; // 這裡絕對不能漏
+        if (error || !member) {
+            document.getElementById('loading').style.display = 'none';
+            return alert("帳號或密碼錯誤");
+        }
+        
+        currentMember = member; // 全域賦值
         document.getElementById('displayUser').innerText = `${member.name} (登出)`;
         document.getElementById('identity-overlay').style.display = 'none';
         if(member.role === 'admin') document.getElementById('adminTabBtn').style.display = 'inline-block';
@@ -197,38 +195,32 @@
         sub.innerHTML = html;
     }
 
-    // --- 全域搜尋核心邏輯 (修復後台失效的關鍵在於不污染全域變數) ---
+    // --- 搜尋邏輯 (修復 ID 與 連動) ---
     function handleGlobalSearch(inputEl, mode) {
         const term = inputEl.value.trim().toLowerCase();
         const resultsDiv = document.getElementById(mode === 'grid' ? 'gridSearchResults' : 'crmSearchResults');
         if (!term) { resultsDiv.style.display = 'none'; return; }
-
         let matches = [];
         for (let cat in industryMap) {
-            industryMap[cat].forEach(ind => {
-                if (ind.toLowerCase().includes(term) || cat.toLowerCase().includes(term)) {
-                    matches.push({ cat, ind });
-                }
-            });
+            industryMap[cat].forEach(ind => { if (ind.toLowerCase().includes(term) || cat.toLowerCase().includes(term)) matches.push({ cat, ind }); });
         }
         if (matches.length > 0) {
             resultsDiv.innerHTML = matches.map(m => `<div class="search-item" onclick="selectSearchMatch('${m.cat}', '${m.ind}', '${mode}')">${m.ind} <small>(${m.cat})</small></div>`).join('');
             resultsDiv.style.display = 'block';
-        } else {
-            resultsDiv.style.display = 'none';
-        }
+        } else { resultsDiv.style.display = 'none'; }
     }
-
     function selectSearchMatch(cat, ind, mode) {
-        const catEl = document.getElementById(mode === 'grid' ? 'gridEditCat' : 'cCategory');
-        const indEl = document.getElementById(mode === 'grid' ? 'gridEditInd' : 'cIndustry');
-        catEl.value = cat;
-        if (mode === 'grid') onGridEditCatChange(); else onCRMCatChange();
-        indEl.value = ind;
+        if (mode === 'grid') {
+            document.getElementById('gridEditCat').value = cat; onGridEditCatChange();
+            document.getElementById('gridEditInd').value = ind;
+        } else {
+            document.getElementById('cCategory').value = cat; onCRMCatChange();
+            document.getElementById('cIndustry').value = ind;
+        }
         document.querySelectorAll('.search-results').forEach(d => d.style.display = 'none');
     }
 
-    // --- 核心宮格與 CRM (恢復穩定版邏輯) ---
+    // --- 宮格與 CRM ---
     function renderGridStructure() {
         const el = document.getElementById('mandala'); el.innerHTML = '';
         for(let g=0; g<9; g++) {
@@ -246,10 +238,10 @@
         const { data } = await db.from('user_grids').select('*').eq('member_id', currentMember.id);
         if (data) data.forEach(item => { gridData[item.grid_index] = item.content; const cell = document.getElementById(`cell-${item.grid_index}`); if (cell) cell.innerText = item.content; });
     }
-    function openGridEditModal(id) { if (id.includes('c4') && id !== 'g4-c4') return; currentEditingGridId = id; document.getElementById('gridEditModal').style.display = 'flex'; }
+    function openGridEditModal(id) { if (id.includes('c4') && id !== 'g4-c4') return; currentEditingGridId = id; document.getElementById('gridSearch').value = ''; document.getElementById('gridSearchResults').style.display = 'none'; document.getElementById('gridEditModal').style.display = 'flex'; }
     function closeGridEditModal() { document.getElementById('gridEditModal').style.display = 'none'; }
     async function saveGridEdit() {
-        const val = document.getElementById('gridEditInd').value; if (!val) return;
+        const val = document.getElementById('gridEditInd').value; if (!val) return alert("請選擇產業");
         await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: currentEditingGridId, content: val }, { onConflict: 'member_id, grid_index' });
         if (currentEditingGridId.startsWith('g4-') && currentEditingGridId !== 'g4-c4') {
             const col = currentEditingGridId.split('-c')[1]; const map = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
@@ -257,11 +249,9 @@
         }
         await loadGrid(); closeGridEditModal();
     }
-
     async function loadContacts() {
         const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id).order('created_at', { ascending: false });
-        const list = document.getElementById('contact-list');
-        list.innerHTML = (data || []).map(c => `<tr><td><span class="tag tag-pink">甜蜜區</span></td><td><b>${c.name}</b><br>${c.industry}</td><td><button onclick="delContact('${c.id}')">✕</button></td></tr>`).join('');
+        document.getElementById('contact-list').innerHTML = (data || []).map(c => `<tr><td><span class="tag tag-pink">甜蜜區</span></td><td><b>${c.name}</b><br>${c.industry}</td><td><button class="btn-sm btn-del" onclick="delContact('${c.id}')">✕</button></td></tr>`).join('');
     }
     async function addContact() {
         const n = document.getElementById('cName').value, i = document.getElementById('cIndustry').value;
@@ -271,14 +261,14 @@
     }
     async function delContact(id) { if(!confirm("確定？")) return; await db.from('user_contacts').delete().eq('id', id); await loadContacts(); }
 
-    // --- 後台管理 (完整恢復穩定版功能) ---
+    // --- 管理功能 ---
     async function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`${t}-view`).classList.add('active');
         if (t === 'admin') loadAdminData();
+        if (t === 'matches') loadMatches();
     }
-
     async function loadAdminData() {
         if(currentMember.role !== 'admin') return;
         const { data: mems } = await db.from('members').select('*').order('name');
@@ -286,8 +276,14 @@
         const { data: inds } = await db.from('industries').select('*').order('category');
         document.getElementById('admin-industry-list').innerHTML = inds.map(i => `<tr><td>${i.category}</td><td>${i.name}</td><td><button class="btn-sm btn-del" onclick="deleteIndustry('${i.id}')">刪除</button></td></tr>`).join('');
     }
-    async function deleteMember(id) { if(!confirm("刪除會員？")) return; await db.from('members').delete().eq('id', id); loadAdminData(); }
-    async function deleteIndustry(id) { if(!confirm("刪除產業？")) return; await db.from('industries').delete().eq('id', id); loadAdminData(); loadIndustries(); }
+    async function deleteMember(id) { if(!confirm("刪除？")) return; await db.from('members').delete().eq('id', id); loadAdminData(); }
+    async function deleteIndustry(id) { if(!confirm("刪除？")) return; await db.from('industries').delete().eq('id', id); loadAdminData(); loadIndustries(); }
+    async function loadMatches() {
+        const needs = Object.values(gridData), resDiv = document.getElementById('match-results');
+        if(needs.length===0) { resDiv.innerHTML = '請先填寫需求'; return; }
+        const { data } = await db.from('user_contacts').select('*').neq('member_id', currentMember.id).in('industry', needs);
+        resDiv.innerHTML = (data || []).map(m => `<div style="background:white; padding:15px; margin-bottom:10px; border-radius:8px; border-left:5px solid var(--primary-color);"><b>${m.name}</b> (${m.industry})<br><small>來自：${m.owner_name}</small></div>`).join('') || '尚無資源';
+    }
 </script>
 </body>
 </html>
