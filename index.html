@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260423-完整升級版)</title>
+    <title>雲貴人脈系統 (Ver 20260423-搜尋升級版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -198,45 +198,7 @@
             .cell { min-height: 50px; }
             .modal { width: 95%; padding: 15px; }
         }
-
-        /* ===== 夥伴總覽分頁 ===== */
-        .overview-header { display:flex; gap:10px; align-items:center; margin-bottom:15px; flex-wrap:wrap; }
-        .member-selector { padding:10px 14px; border:2px solid #ddd; border-radius:8px; font-size:0.95rem; min-width:160px; font-family:"Microsoft JhengHei",sans-serif; outline:none; cursor:pointer; }
-        .member-selector:focus { border-color:var(--primary-color); }
-
-        .ranking-panel { background:white; border-radius:8px; padding:15px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
-        .ranking-title { font-size:1rem; font-weight:bold; color:#333; margin:0 0 12px 0; display:flex; align-items:center; gap:6px; }
-        .rank-item { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid #f5f5f5; }
-        .rank-item:last-child { border-bottom:none; }
-        .rank-no { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.82rem; flex-shrink:0; }
-        .rank-no.gold { background:#ffd700; color:#7a5f00; }
-        .rank-no.silver { background:#e0e0e0; color:#555; }
-        .rank-no.bronze { background:#cd9b6e; color:#fff; }
-        .rank-no.normal { background:#f0f0f0; color:#666; }
-        .rank-bar-wrap { flex:1; }
-        .rank-name { font-size:0.88rem; color:#333; margin-bottom:3px; }
-        .rank-bar { height:8px; border-radius:4px; background:var(--primary-color); opacity:0.75; transition:width 0.4s ease; }
-        .rank-count { font-size:0.82rem; color:#888; min-width:36px; text-align:right; flex-shrink:0; }
-
-        /* 只讀宮格 */
-        .grid-select.readonly { cursor:default; pointer-events:none; }
-        .grid-select.readonly:hover { background:transparent; }
-        .view-grid-label { font-size:0.9rem; color:#666; margin-bottom:8px; padding:8px 12px; background:#f8f8f8; border-radius:6px; border-left:3px solid var(--primary-color); }
-
-        /* ===== 批量輸入 ===== */
-        .batch-section { background:white; border-radius:8px; border-top:4px solid #2196f3; padding:15px; margin-bottom:20px; box-shadow:0 2px 5px rgba(0,0,0,0.05); }
-        .batch-toggle { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-        .batch-toggle-btn { padding:8px 18px; border-radius:20px; border:2px solid #ddd; background:white; cursor:pointer; font-size:0.9rem; font-weight:bold; color:#666; transition:all 0.2s; }
-        .batch-toggle-btn.active { background:#2196f3; color:white; border-color:#2196f3; }
-        .batch-table-wrap { overflow-x:auto; }
-        .batch-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
-        .batch-table th { background:#2196f3; color:white; padding:9px 8px; text-align:left; white-space:nowrap; }
-        .batch-table td { padding:5px 4px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
-        .batch-table input, .batch-table select { padding:7px 8px; font-size:0.85rem; min-width:unset; width:100%; box-sizing:border-box; }
-        .batch-row-del { background:none; border:none; color:#f44336; cursor:pointer; font-size:1rem; padding:4px 6px; }
-        .batch-add-row { margin-top:8px; padding:7px 16px; background:#e3f2fd; color:#1565c0; border:1px dashed #90caf9; border-radius:6px; cursor:pointer; font-size:0.88rem; font-weight:bold; width:100%; }
-        .batch-submit { margin-top:10px; padding:11px; background:#2196f3; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; font-size:0.95rem; width:100%; }
-        .batch-submit:hover { background:#1976d2; }
+    </style>
 </head>
 <body>
 
@@ -266,7 +228,6 @@
     <div class="tabs">
         <div class="tab-btn active" onclick="switchTab('grid')">產業鏈 81 宮格</div>
         <div class="tab-btn" onclick="switchTab('matches')">🤝 資源媒合</div>
-        <div class="tab-btn" onclick="switchTab('overview')">📊 夥伴總覽</div>
         <div class="tab-btn" onclick="switchTab('crm')">人脈變現表</div>
         <div class="tab-btn tab-btn-admin" id="adminTabBtn" onclick="switchTab('admin')">⚙️ 後台</div>
     </div>
@@ -286,97 +247,46 @@
     <div id="match-results"></div>
 </div>
 
-<div id="overview-view" class="container">
-    <!-- 產業需求排行 -->
-    <div class="ranking-panel">
-        <div class="ranking-title">🏆 全分會產業需求排行榜</div>
-        <div id="rankingList"><div style="text-align:center;padding:20px;color:#aaa;">載入中...</div></div>
-    </div>
-
-    <!-- 夥伴宮格查看 -->
-    <div class="ranking-panel">
-        <div class="ranking-title">👤 查看夥伴的 81 宮格</div>
-        <div class="overview-header">
-            <select class="member-selector" id="viewMemberSelect" onchange="loadViewGrid()">
-                <option value="">— 請選擇夥伴 —</option>
-            </select>
-            <span id="viewGridLabel" style="font-size:0.85rem;color:#999;"></span>
-        </div>
-        <div id="viewGridArea" style="display:none;">
-            <div class="view-grid-label" id="viewGridOwner"></div>
-            <div class="mandala" id="viewMandala"></div>
-        </div>
-        <div id="viewGridEmpty" style="text-align:center;padding:20px;color:#aaa;font-size:0.9rem;">請選擇上方夥伴查看其宮格</div>
-    </div>
-</div>
-
 <div id="crm-view" class="container">
-    <!-- 批量輸入區塊 -->
-    <div class="batch-section">
-        <div class="batch-toggle">
-            <span style="font-weight:bold;font-size:0.95rem;">✍️ 新增人脈</span>
-            <button class="batch-toggle-btn" id="singleModeBtn" onclick="setBatchMode(false)">單筆</button>
-            <button class="batch-toggle-btn" id="batchModeBtn" onclick="setBatchMode(true)">批量輸入</button>
+    <div class="crm-form">
+        <div class="row">
+            <input id="cName" placeholder="人脈姓名">
         </div>
 
-        <!-- 單筆模式 (原有) -->
-        <div id="singleInputArea">
-            <div class="row"><input id="cName" placeholder="人脈姓名"></div>
-            <div style="background:#fff8f8; padding:10px; border-radius:6px; border:1px solid #f5caca; margin-bottom:10px;">
-                <div class="search-hint">🔍 快速搜尋：輸入關鍵字自動填入下方選單</div>
-                <div class="search-industry-wrapper">
-                    <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="例：水電、建材、金融…" autocomplete="off" oninput="onSearchInput('crm')" onkeydown="onSearchKeydown(event,'crm')" onfocus="onSearchFocus('crm')">
-                    <button class="search-clear-btn" id="crmSearchClear" onclick="clearSearch('crm')">✕</button>
-                    <div class="search-dropdown" id="crmSearchDropdown"></div>
-                </div>
+        <!-- 關鍵字搜尋區塊 (CRM) -->
+        <div style="background:#fff8f8; padding:10px; border-radius:6px; border:1px solid #f5caca; margin-bottom:10px;">
+            <div class="search-hint">🔍 快速搜尋：輸入關鍵字自動填入下方選單</div>
+            <div class="search-industry-wrapper">
+                <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="例：水電、建材、金融…" autocomplete="off" oninput="onSearchInput('crm')" onkeydown="onSearchKeydown(event,'crm')" onfocus="onSearchFocus('crm')">
+                <button class="search-clear-btn" id="crmSearchClear" onclick="clearSearch('crm')">✕</button>
+                <div class="search-dropdown" id="crmSearchDropdown"></div>
             </div>
-            <div class="row" style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #eee;">
-                <select id="cCategory" onchange="onCRMCatChange()">
-                    <option value="" disabled selected>1. 選擇【雲貴 8 大戰略引薦圈】</option>
-                </select>
-                <select id="cIndustry">
-                    <option value="" disabled selected>2. 選擇細項</option>
-                </select>
-            </div>
-            <div class="row">
-                <select id="cTrust">
-                    <option value="A">A.極熟悉信任</option>
-                    <option value="B">B.交情不錯</option>
-                    <option value="C">C.不熟.信任度偏低</option>
-                    <option value="D">D.幾乎陌生</option>
-                </select>
-                <select id="cNeed">
-                    <option value="X">X-需求極高</option>
-                    <option value="Y">Y-存在一般需求</option>
-                    <option value="Z">Z-不了解需求</option>
-                </select>
-            </div>
-            <button class="btn-main" onclick="addContact()">新增人脈資源</button>
         </div>
 
-        <!-- 批量模式 -->
-        <div id="batchInputArea" style="display:none;">
-            <div style="font-size:0.83rem;color:#888;margin-bottom:8px;">填寫完畢後點「批量儲存」一次送出所有筆資料</div>
-            <div class="batch-table-wrap">
-                <table class="batch-table">
-                    <thead>
-                        <tr>
-                            <th style="width:110px;">姓名</th>
-                            <th style="width:140px;">大分類</th>
-                            <th style="width:150px;">細項</th>
-                            <th style="width:100px;">信任度</th>
-                            <th style="width:90px;">需求度</th>
-                            <th style="width:36px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="batchRows"></tbody>
-                </table>
-            </div>
-            <button class="batch-add-row" onclick="addBatchRow()">＋ 新增一行</button>
-            <button class="batch-submit" onclick="submitBatch()">批量儲存</button>
+        <div class="row" style="background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid #eee;">
+            <select id="cCategory" onchange="onCRMCatChange()">
+                <option value="" disabled selected>1. 選擇【雲貴 8 大戰略引薦圈】</option>
+            </select>
+            <select id="cIndustry">
+                <option value="" disabled selected>2. 選擇細項</option>
+            </select>
         </div>
+
+        <div class="row">
+            <select id="cTrust">
+                <option value="A">A.極熟悉信任</option>
+                <option value="B">B.交情不錯</option>
+                <option value="C">C.不熟.信任度偏低</option>
+                <option value="D">D.幾乎陌生</option>
+            </select>
+            <select id="cNeed">
+                <option value="X">X-需求極高</option>
+                <option value="Y">Y-存在一般需求</option>
+                <option value="Z">Z-不了解需求</option>
+            </select>
+        </div>
+        <button class="btn-main" onclick="addContact()">新增人脈資源</button>
     </div>
-
     <div style="overflow-x:auto">
         <table class="std-table">
             <thead><tr><th>策略</th><th>姓名/產業</th><th>面談紀錄</th><th>操作</th></tr></thead>
@@ -882,7 +792,6 @@
         await loadGrid();       
         await loadContacts();   
         setupRealtime();
-        setBatchMode(false);
         document.getElementById('loading').style.display = 'none';
     }
 
@@ -1195,202 +1104,10 @@
     function switchTab(t) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        const tabMap = { grid:0, matches:1, overview:2, crm:3 };
         if(t==='grid') { document.getElementById('grid-view').classList.add('active'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); }
         else if(t==='matches') { document.getElementById('matches-view').classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active'); loadMatches(); }
-        else if(t==='overview') { document.getElementById('overview-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); loadOverview(); }
-        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[3].classList.add('active'); }
+        else if(t==='crm') { document.getElementById('crm-view').classList.add('active'); document.querySelectorAll('.tab-btn')[2].classList.add('active'); }
         else if(t==='admin') { document.getElementById('admin-view').classList.add('active'); document.getElementById('adminTabBtn').classList.add('active'); loadMembers(); loadAdminIndustries(); }
-    }
-
-    // ===== 夥伴總覽 =====
-    let allMembers = [];
-    let viewGridData = {};
-
-    async function loadOverview() {
-        await loadRanking();
-        await loadMemberSelector();
-    }
-
-    async function loadRanking() {
-        const list = document.getElementById('rankingList');
-        list.innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">計算中...</div>';
-        const { data } = await db.from('user_grids').select('content');
-        if (!data || data.length === 0) { list.innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">尚無資料</div>'; return; }
-        const countMap = {};
-        data.forEach(r => { if(r.content && r.content.trim()) countMap[r.content] = (countMap[r.content]||0)+1; });
-        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0,15);
-        if(sorted.length === 0) { list.innerHTML = '<div style="text-align:center;padding:16px;color:#aaa;">尚無資料</div>'; return; }
-        const max = sorted[0][1];
-        list.innerHTML = sorted.map(([name,count],i) => {
-            const cls = i===0?'gold':i===1?'silver':i===2?'bronze':'normal';
-            const pct = Math.round((count/max)*100);
-            return `<div class="rank-item">
-                <div class="rank-no ${cls}">${i+1}</div>
-                <div class="rank-bar-wrap">
-                    <div class="rank-name">${name}</div>
-                    <div class="rank-bar" style="width:${pct}%"></div>
-                </div>
-                <div class="rank-count">${count} 人</div>
-            </div>`;
-        }).join('');
-    }
-
-    async function loadMemberSelector() {
-        const { data } = await db.from('members').select('id,name').order('name');
-        allMembers = (data||[]).filter(m => m.name !== 'admin');
-        const sel = document.getElementById('viewMemberSelect');
-        sel.innerHTML = '<option value="">— 請選擇夥伴 —</option>';
-        allMembers.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.innerText = m.name + (m.id === currentMember.id ? ' (我)' : '');
-            sel.appendChild(opt);
-        });
-    }
-
-    async function loadViewGrid() {
-        const memberId = document.getElementById('viewMemberSelect').value;
-        const viewArea = document.getElementById('viewGridArea');
-        const viewEmpty = document.getElementById('viewGridEmpty');
-        if(!memberId) { viewArea.style.display='none'; viewEmpty.style.display='block'; return; }
-
-        document.getElementById('loading').style.display = 'block';
-        const member = allMembers.find(m=>m.id===memberId);
-        document.getElementById('viewGridOwner').innerText = `📋 ${member?member.name:'夥伴'} 的 81 宮格（唯讀）`;
-
-        // 初始化唯讀宮格
-        const viewMandala = document.getElementById('viewMandala');
-        viewMandala.innerHTML = '';
-        viewGridData = {};
-
-        for(let g=0;g<9;g++){
-            let sub = document.createElement('div'); sub.className='sub-grid';
-            for(let c=0;c<9;c++){
-                let cell = document.createElement('div');
-                let isM=(g===4&&c===4),isC=(c===4);
-                cell.className=`cell ${isM?'master':''} ${isC?'core':''}`;
-                let div = document.createElement('div');
-                div.className='grid-select readonly';
-                div.dataset.id=`g${g}-c${c}`;
-                cell.appendChild(div); sub.appendChild(cell);
-            }
-            viewMandala.appendChild(sub);
-        }
-
-        const { data } = await db.from('user_grids').select('*').eq('member_id', memberId);
-        if(data){
-            data.forEach(item=>{
-                viewGridData[item.grid_index]=item.content;
-                const el=viewMandala.querySelector(`.grid-select[data-id="${item.grid_index}"]`);
-                if(el) el.innerText=item.content;
-            });
-            // sync outer center cells
-            for(let i=0;i<9;i++){
-                if(i===4) continue;
-                const cv=viewGridData[`g4-c${i}`]||'';
-                const tid=`g${mapCenterToOuter[i]}-c4`;
-                const el=viewMandala.querySelector(`.grid-select[data-id="${tid}"]`);
-                if(el) el.innerText=cv;
-            }
-        }
-
-        viewArea.style.display='block'; viewEmpty.style.display='none';
-        document.getElementById('loading').style.display='none';
-    }
-
-    // ===== 批量輸入 =====
-    let isBatchMode = false;
-    let batchRowCount = 0;
-
-    function setBatchMode(isB) {
-        isBatchMode = isB;
-        document.getElementById('singleInputArea').style.display = isB ? 'none' : 'block';
-        document.getElementById('batchInputArea').style.display = isB ? 'block' : 'none';
-        document.getElementById('singleModeBtn').classList.toggle('active', !isB);
-        document.getElementById('batchModeBtn').classList.toggle('active', isB);
-        if(isB && document.getElementById('batchRows').children.length === 0) {
-            addBatchRow(); addBatchRow(); addBatchRow();
-        }
-    }
-
-    function buildCatOptions(selectedCat='') {
-        let html = `<option value="" disabled ${!selectedCat?'selected':''}>選擇大分類</option>`;
-        for(const cat of Object.keys(industryMap)) {
-            html += `<option value="${cat}" ${cat===selectedCat?'selected':''}>${cat}</option>`;
-        }
-        return html;
-    }
-
-    function buildIndOptions(cat, selectedInd='') {
-        if(!cat || !industryMap[cat]) return `<option value="" disabled selected>先選大分類</option>`;
-        let html = `<option value="" disabled ${!selectedInd?'selected':''}>選擇細項</option>`;
-        industryMap[cat].forEach(item => {
-            html += `<option value="${item}" ${item===selectedInd?'selected':''}>${item}</option>`;
-        });
-        return html;
-    }
-
-    function addBatchRow() {
-        const id = ++batchRowCount;
-        const tbody = document.getElementById('batchRows');
-        const tr = document.createElement('tr');
-        tr.id = `brow-${id}`;
-        tr.innerHTML = `
-            <td><input type="text" placeholder="姓名" id="bn-${id}"></td>
-            <td><select id="bc-${id}" onchange="onBatchCatChange(${id})">${buildCatOptions()}</select></td>
-            <td><select id="bi-${id}"><option value="" disabled selected>先選大分類</option></select></td>
-            <td><select id="bt-${id}">
-                <option value="A">A.極熟悉</option>
-                <option value="B">B.交情不錯</option>
-                <option value="C">C.不熟</option>
-                <option value="D">D.陌生</option>
-            </select></td>
-            <td><select id="bn2-${id}">
-                <option value="X">X-極高</option>
-                <option value="Y">Y-一般</option>
-                <option value="Z">Z-不了解</option>
-            </select></td>
-            <td><button class="batch-row-del" onclick="removeBatchRow(${id})">✕</button></td>`;
-        tbody.appendChild(tr);
-    }
-
-    function removeBatchRow(id) {
-        const tr = document.getElementById(`brow-${id}`);
-        if(tr) tr.remove();
-    }
-
-    function onBatchCatChange(id) {
-        const cat = document.getElementById(`bc-${id}`).value;
-        document.getElementById(`bi-${id}`).innerHTML = buildIndOptions(cat);
-    }
-
-    async function submitBatch() {
-        const rows = document.getElementById('batchRows').querySelectorAll('tr');
-        const records = [];
-        let hasError = false;
-        rows.forEach(tr => {
-            const id = tr.id.replace('brow-','');
-            const name = document.getElementById(`bn-${id}`).value.trim();
-            const cat = document.getElementById(`bc-${id}`).value;
-            const ind = document.getElementById(`bi-${id}`).value;
-            const trust = document.getElementById(`bt-${id}`).value;
-            const need = document.getElementById(`bn2-${id}`).value;
-            if(!name && !ind) return; // 空行跳過
-            if(!name || !ind) { hasError=true; return; }
-            records.push({ member_id:currentMember.id, owner_name:currentMember.name, name, industry:ind, trust_level:trust, need_level:need, logs:[] });
-        });
-        if(hasError) { alert('部分行資料不完整，請確認姓名與細項都有填寫'); return; }
-        if(records.length===0) { alert('沒有可儲存的資料'); return; }
-        document.getElementById('loading').style.display='block';
-        const { error } = await db.from('user_contacts').insert(records);
-        document.getElementById('loading').style.display='none';
-        if(error) { alert('儲存失敗：'+error.message); return; }
-        document.getElementById('batchRows').innerHTML='';
-        batchRowCount=0;
-        addBatchRow(); addBatchRow(); addBatchRow();
-        await loadContacts();
-        alert(`成功新增 ${records.length} 筆人脈！`);
     }
 </script>
 </body>
