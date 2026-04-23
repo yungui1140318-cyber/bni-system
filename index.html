@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260423-清晰大字版)</title>
+    <title>雲貴人脈系統 (Ver 20260423-體驗優化版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -18,7 +18,8 @@
         /* Layout */
         header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
-        .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .user-tag:hover { background: rgba(0,0,0,0.4); }
 
         .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
         .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; }
@@ -30,13 +31,12 @@
         .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Grid - 大字優化 */
+        /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; padding: 2px; }
         .grid-select { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; text-align: center; word-break: break-all; line-height: 1.2; }
         
-        /* 夥伴宮格大字專屬樣式 */
         .partner-cell-text { font-size: 0.9rem !important; font-weight: bold; color: #000; text-align: center; }
 
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
@@ -49,13 +49,13 @@
         .rank-bar-wrap { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
         .rank-bar { height: 100%; background: var(--primary-color); transition: width 0.6s ease; }
 
-        /* 資源媒合 - 排版與格線優化 */
+        /* Match Cards */
         .match-card { background: white; border-bottom: 1px solid #ddd; padding: 15px 5px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
         .match-card.sweet { background: #fff5f5; }
         .match-info h4 { margin: 0 0 8px 0; color: #d32f2f; font-size: 1.05rem; }
         .match-info p { margin: 4px 0; color: #555; font-size: 0.9rem; }
 
-        /* CRM & Table */
+        /* CRM Form & Table */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
@@ -65,7 +65,6 @@
         .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
 
-        /* 戰略標籤 */
         .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
         .tag-pink { background-color: #fce4ec; color: #c2185b; } 
         .tag-blue { background-color: #e3f2fd; color: #1565c0; } 
@@ -73,7 +72,7 @@
         .tag-green { background-color: #e8f5e9; color: #2e7d32; } 
 
         /* Search Dropdown */
-        .search-industry-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
+        .search-industry-wrapper { position: relative; margin-bottom: 10px; }
         .search-industry-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; outline: none; }
         .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; z-index: 9000; max-height: 200px; overflow-y: auto; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .search-dropdown-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
@@ -90,6 +89,11 @@
         .btn-del { background: #f44336; }
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; display: none; z-index: 20000; }
+        
+        /* 視覺引導強化 */
+        .section-highlight { border: 2px solid #2196f3 !important; box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15); }
+        .view-hint { font-size: 0.85rem; color: #2196f3; font-weight: bold; margin-bottom: 8px; display: block; }
+
         @media (max-width: 768px) { .mandala { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -114,7 +118,7 @@
 
 <header>
     <h1>雲貴人脈庫</h1>
-    <span class="user-tag" id="displayUser" onclick="logout()">登出</span>
+    <span class="user-tag" id="displayUser" onclick="logout()">-- (登出)</span>
 </header>
 
 <div class="tabs-container">
@@ -129,14 +133,18 @@
 
 <div id="overview-view" class="container active">
     <div class="ranking-panel">
-        <h3 style="margin:0 0 10px 0">🏆 分會產業需求排行榜</h3>
+        <h3 style="margin:0 0 10px 0">🏆 分會產業需求排行 (Top 15)</h3>
         <div id="rankingList">載入中...</div>
     </div>
-    <div class="ranking-panel">
-        <h3 style="margin:0 0 10px 0">👤 夥伴產業地圖</h3>
-        <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:12px; font-size:1rem; border-radius:8px; border:1px solid #ccc;"></select>
-        <div id="partnerViewArea" style="display:none; margin-top:20px;">
-            <div id="partnerLabel" style="font-weight:bold; margin-bottom:10px; color:var(--primary-color)"></div>
+    
+    <div class="ranking-panel section-highlight">
+        <span class="view-hint">🔍 想找誰合作？點選下方選單查看夥伴地圖</span>
+        <h3 style="margin:0 0 12px 0; color:#2196f3">👤 夥伴產業地圖 (查看模式)</h3>
+        <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:15px; font-size:1.1rem; border-radius:8px; border:2px solid #2196f3; background:#f7fbff; color:#1565c0; font-weight:bold;">
+            <option value="">-- 請點我選擇夥伴 --</option>
+        </select>
+        <div id="partnerViewArea" style="display:none; margin-top:25px; border-top:1px dashed #ccc; padding-top:15px;">
+            <div id="partnerLabel" style="font-weight:bold; margin-bottom:15px; color:var(--primary-color); font-size:1.1rem; text-align:center;"></div>
             <div id="partnerMandala" class="mandala"></div>
         </div>
     </div>
@@ -154,7 +162,7 @@
     <div class="crm-form">
         <div class="row"><input id="cName" placeholder="人脈姓名"></div>
         <div class="search-industry-wrapper">
-            <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="🔍 搜尋產業項目..." oninput="onSearchInput('crm')">
+            <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="🔍 快速搜尋產業項目..." oninput="onSearchInput('crm')">
             <div class="search-dropdown" id="crmSearchDropdown"></div>
         </div>
         <div class="row">
@@ -166,7 +174,7 @@
                 <option value="A">A. 極熟悉信任</option><option value="B">B. 交情不錯</option><option value="C">C. 信任度偏低</option><option value="D">D. 幾乎陌生</option>
             </select>
             <select id="cNeed">
-                <option value="X">X. 需求極高</option><option value="Y">Y. 存在一般需求</option><option value="Z">Z. 不了解需求</option>
+                <option value="X">X. 需求極高</option><option value="Y. 存在一般需求"></option><option value="Z. 不了解需求"></option>
             </select>
         </div>
         <button class="btn-main" onclick="addContact()">新增人脈資源</button>
@@ -188,7 +196,7 @@
         <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>角色</th><th>切換</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
     </div>
     <div class="admin-panel">
-        <h3>🏷️ 產業大類/細項管理</h3>
+        <h3>🏷️ 產業管理</h3>
         <div class="row">
             <select id="newAdminCat"></select>
             <input id="newAdminInd" placeholder="細項名稱">
@@ -236,7 +244,7 @@
         if(error || !data) return alert("登入失敗");
         currUser = data;
         document.getElementById('identity-overlay').style.display = 'none';
-        document.getElementById('displayUser').innerText = n;
+        document.getElementById('displayUser').innerText = `${n} (登出)`;
         if(data.role === 'admin') document.getElementById('adminTabBtn').style.display = 'block';
         init();
     }
@@ -377,7 +385,7 @@
     }
     function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
     async function saveLog() {
-        const msg = document.getElementById('logContent').value; if(!msg) return;
+        const msg = document.getElementById('logInput').value; if(!msg) return;
         const c = myContacts[curLogIdx];
         const newLogs = c.logs || [];
         newLogs.push({ date: new Date().toLocaleString(), msg });
@@ -395,11 +403,11 @@
                 <div class="rank-no">${i+1}</div>
                 <div style="flex:1; font-weight:bold">${n}</div>
                 <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/max)*100}%"></div></div>
-                <div style="font-size:0.8rem; margin-left:10px;">${ct} 人</div>
+                <div style="font-size:0.8rem; margin-left:10px;">${ct} 人需求</div>
             </div>`).join('');
 
         const { data: ms } = await db.from('members').select('id, name').order('name');
-        document.getElementById('partnerSelect').innerHTML = '<option value="">-- 點我選擇夥伴地圖 --</option>' + ms.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('partnerSelect').innerHTML = '<option value="">-- 請點我選擇夥伴 --</option>' + ms.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     }
 
     async function loadPartnerGrid() {
@@ -407,7 +415,7 @@
         if(!mid) return document.getElementById('partnerViewArea').style.display = 'none';
         const { data } = await db.from('user_grids').select('*').eq('member_id', mid);
         const pName = document.getElementById('partnerSelect').options[document.getElementById('partnerSelect').selectedIndex].text;
-        document.getElementById('partnerLabel').innerText = pName + " 的 81 宮格產業圖";
+        document.getElementById('partnerLabel').innerText = pName + " 的產業地圖";
         const area = document.getElementById('partnerMandala'); area.innerHTML = '';
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className = 'sub-grid';
@@ -424,29 +432,28 @@
     }
 
     async function loadMatches() {
-        const res = document.getElementById('match-results'); res.innerHTML = "🔍 媒合中...";
-        const needs = Object.values(gridData);
+        const res = document.getElementById('match-results'); res.innerHTML = "🔍 搜尋中...";
+        const needs = Object.values(gridData).filter(v => v !== '');
         const { data } = await db.from('user_contacts').select('*').neq('member_id', currUser.id).in('industry', needs);
-        if(!data?.length) { res.innerHTML = "目前暫無符合您產業鏈的人脈"; return; }
+        if(!data?.length) { res.innerHTML = "目前暫無符合的人脈匹配。"; return; }
         res.innerHTML = data.map(c => {
             const strat = getStrategy(c.trust_level, c.need_level);
             return `<div class="match-card ${c.trust_level==='A'?'sweet':''}">
                 <div class="match-info">
                     <h4>${c.name} (${c.industry})</h4>
-                    <p>持有夥伴：<b>${c.owner_name}</b></p>
+                    <p>持有者：<b>${c.owner_name}</b></p>
                     <p>戰略建議：<span class="tag ${strat.cls}">${strat.text}</span></p>
                 </div>
-                <div style="text-align:right; font-size:0.85rem; color:#666;">
+                <div style="text-align:right; font-size:0.85rem; color:#666; border-top:1px solid #eee; padding-top:5px; margin-top:5px;">
                     信任:${c.trust_level} / 需求:${c.need_level}
                 </div>
             </div>`;
         }).join('');
     }
 
-    /* 後台功能 */
     async function loadAdminData() {
         const { data: mems } = await db.from('members').select('*').order('name');
-        document.getElementById('member-list').innerHTML = mems.map(m => `<tr><td>${m.name}</td><td>${m.role}</td><td><button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">切換角色</button></td><td><button class="btn-sm btn-del" onclick="delM('${m.id}')">✕</button></td></tr>`).join('');
+        document.getElementById('member-list').innerHTML = mems.map(m => `<tr><td>${m.name}</td><td>${m.role}</td><td><button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">切換</button></td><td><button class="btn-sm btn-del" onclick="delM('${m.id}')">✕</button></td></tr>`).join('');
         const { data: inds } = await db.from('industries').select('*').order('category').limit(100);
         document.getElementById('admin-industry-list').innerHTML = inds.map(i => `<tr><td>${i.category}</td><td>${i.name}</td><td><button class="btn-sm btn-del" onclick="delI(${i.id})">✕</button></td></tr>`).join('');
     }
