@@ -3,30 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260423-功能精準整合版)</title>
+    <title>雲貴人脈系統 (Ver 20260423-靈魂回歸版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg-color); height: 100vh; display: flex; flex-direction: column; color: var(--text-color); overflow: hidden; }
 
-        /* Login Overlay */
-        #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s; }
+        /* Login */
+        #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .box h2 { margin-top: 0; color: #333; }
-        .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; outline: none; }
-        .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; }
+        .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
         
         /* Layout */
-        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
+        header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 12px; border-radius: 20px; font-weight: bold; cursor: pointer; }
 
         .tabs-container { background: #fff; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; }
-        .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; white-space: nowrap; }
-        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.95rem; min-width: 100px; display: inline-block; }
+        .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.9rem; min-width: 100px; white-space: nowrap; border: none; }
         .tab-btn.active { background: var(--primary-color); color: white; }
         .tab-btn-admin { display: none; color: #d32f2f; } 
-        .tab-btn-admin.active { background: #333; color: white; }
 
         .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
         .container.active { display: block; animation: fadeIn 0.3s ease; }
@@ -35,77 +33,53 @@
         /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
-        .sub-grid:nth-child(5) { border: 2px solid var(--primary-color); box-shadow: 0 0 15px rgba(207, 46, 46, 0.15); z-index: 5; position: relative; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; }
-        
-        .grid-select { 
-            width: 100%; height: 100%; border: none; outline: none; background: transparent; 
-            text-align: center; display: flex; align-items: center; justify-content: center; 
-            font-size: 0.85rem; cursor: pointer; padding: 4px; box-sizing: border-box;
-            word-break: break-all;
-        }
-        .grid-select:hover { background: rgba(0,0,0,0.03); }
+        .grid-select { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; text-align: center; word-break: break-all; }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
-        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; font-size: 0.95rem; }
+        .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; }
 
-        /* Ranking UI */
+        /* Ranking & Cards */
         .ranking-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 4px solid var(--primary-color); }
         .rank-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
         .rank-no { width: 26px; font-weight: bold; color: var(--primary-color); }
         .rank-bar-wrap { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
         .rank-bar { height: 100%; background: var(--primary-color); transition: width 0.6s ease; }
 
-        /* Match Cards */
-        .match-card { background: white; border-left: 5px solid #2196f3; padding: 15px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .match-card.sweet { border-left-color: #e91e63; background: #fff0f6; }
-        .match-info h4 { margin: 0 0 5px 0; color: #333; }
-        .match-info p { margin: 0; color: #666; font-size: 0.9rem; }
-        .match-tag { display: inline-block; padding: 3px 8px; border-radius: 4px; background: #eee; font-size: 0.75rem; color: #555; }
-
-        /* CRM Form */
+        /* CRM Form & Table */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
         .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-
-        /* Table & Tags */
-        .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); background: white; }
+        
+        .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; background: white; }
         .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; color: #333; font-weight: bold; display: inline-block; }
-        .tag-pink { background-color: #fce4ec; color: #c2185b; }
-        .tag-blue { background-color: #e3f2fd; color: #1565c0; }
-        .tag-yellow { background-color: #fff9c4; color: #fbc02d; }
-        .tag-green { background-color: #e8f5e9; color: #2e7d32; }
 
-        /* Admin */
-        .admin-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .admin-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; }
-        .btn-edit { background: #2196f3; color: white; }
-        .btn-del { background: #f44336; color: white; }
-        .btn-toggle { background: #4caf50; color: white; }
-
-        /* Modal */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
-        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); animation: popIn 0.2s ease; max-height: 90vh; display: flex; flex-direction: column; position: relative; }
-        .close-x { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #999; }
-        .modal textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-top: 10px; resize: vertical; box-sizing: border-box; font-family: inherit;}
-        
-        #logHistoryContainer { max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #eee; padding: 5px; border-radius: 4px; background: #fafafa; }
-        .log-entry { background: #fff; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; border-radius: 0 4px 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .log-date { display: block; font-size: 0.75rem; color: #888; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        /* 靈魂標籤：四大戰略區 */
+        .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+        .tag-pink { background-color: #fce4ec; color: #c2185b; } /* 甜蜜區 */
+        .tag-blue { background-color: #e3f2fd; color: #1565c0; } /* 主動了解 */
+        .tag-yellow { background-color: #fff9c4; color: #fbc02d; } /* 建立信任 */
+        .tag-green { background-color: #e8f5e9; color: #2e7d32; } /* 有空再了解 */
 
         /* Search Dropdown */
-        .search-industry-wrapper { position: relative; margin-bottom: 10px; }
+        .search-industry-wrapper { position: relative; width: 100%; margin-bottom: 10px; }
         .search-industry-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; outline: none; }
-        .search-clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #aaa; display: none; }
-        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); z-index: 9000; max-height: 240px; overflow-y: auto; display: none; }
-        .search-dropdown-item { padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #f5f5f5; }
+        .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; z-index: 9000; max-height: 200px; overflow-y: auto; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .search-dropdown-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 
-        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; font-size: 0.85rem; display: none; z-index: 20000; }
-        
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
+        .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; }
+        .close-x { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #999; }
+        #logHistoryContainer { max-height: 200px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #eee; padding: 5px; border-radius: 4px; background: #fafafa; }
+        .log-entry { background: #fff; border-left: 3px solid #ccc; padding: 8px; margin-bottom: 6px; font-size: 0.85rem; }
+
+        .btn-sm { padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.8rem; margin-right: 5px; color: white; }
+        .btn-edit { background: #2196f3; }
+        .btn-del { background: #f44336; }
+
+        #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; display: none; z-index: 20000; }
         @media (max-width: 768px) { .mandala { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -114,8 +88,7 @@
 <script>
     const SUPABASE_URL = 'https://htlywcaudjfnneaoikgz.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0bHl3Y2F1ZGpmbm5lYW9pa2d6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MjExOTIsImV4cCI6MjA4NjI5NzE5Mn0.h5lO8qbOBaQD1vqNwyFmLAGjut6afZN4mDrgmPoxCUg';
-    const { createClient } = supabase;
-    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 </script>
 
 <div id="loading">處理中...</div>
@@ -123,7 +96,7 @@
 <div id="identity-overlay">
     <div class="box">
         <h2>雲貴人脈系統</h2>
-        <input type="text" id="loginName" placeholder="帳號 / 姓名">
+        <input type="text" id="loginName" placeholder="姓名">
         <input type="password" id="loginPwd" placeholder="密碼">
         <button onclick="login()">登入</button>
     </div>
@@ -147,12 +120,12 @@
 <div id="overview-view" class="container active">
     <div class="ranking-panel">
         <h3 style="margin-top:0">🏆 全分會產業需求 Top 15</h3>
-        <div id="rankingList">載入排行中...</div>
+        <div id="rankingList">計算中...</div>
     </div>
     <div class="ranking-panel">
         <h3 style="margin-top:0">👤 夥伴宮格查看</h3>
-        <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd;"></select>
-        <div id="partnerViewArea" style="display:none;">
+        <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;"></select>
+        <div id="partnerViewArea" style="display:none; margin-top:20px;">
             <div id="partnerLabel" style="font-weight:bold; margin-bottom:10px; color:var(--primary-color)"></div>
             <div id="partnerMandala" class="mandala"></div>
         </div>
@@ -171,7 +144,7 @@
     <div class="crm-form">
         <div class="row"><input id="cName" placeholder="人脈姓名"></div>
         <div class="search-industry-wrapper">
-            <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="🔍 快速搜尋產業..." oninput="onSearchInput('crm')">
+            <input type="text" class="search-industry-input" id="crmSearchInput" placeholder="🔍 快速搜尋產業項目..." oninput="onSearchInput('crm')">
             <div class="search-dropdown" id="crmSearchDropdown"></div>
         </div>
         <div class="row">
@@ -179,8 +152,17 @@
             <select id="cIndustry"></select>
         </div>
         <div class="row">
-            <select id="cTrust"><option value="A">極熟悉</option><option value="B">不錯</option><option value="C">不熟</option></select>
-            <select id="cNeed"><option value="X">需求高</option><option value="Y">一般</option><option value="Z">不了解</option></select>
+            <select id="cTrust">
+                <option value="A">A. 極熟悉信任</option>
+                <option value="B">B. 交情不錯</option>
+                <option value="C">C. 信任度偏低</option>
+                <option value="D">D. 幾乎陌生</option>
+            </select>
+            <select id="cNeed">
+                <option value="X">X. 需求極高</option>
+                <option value="Y">Y. 存在一般需求</option>
+                <option value="Z">Z. 不了解需求</option>
+            </select>
         </div>
         <button class="btn-main" onclick="addContact()">新增人脈資源</button>
     </div>
@@ -189,19 +171,17 @@
 
 <div id="admin-view" class="container">
     <div class="admin-panel">
-        <div class="admin-header"><h3>👥 會員管理中心</h3></div>
-        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>狀態</th><th>切換</th><th>密碼</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
+        <h3>👥 會員管理中心</h3>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>狀態</th><th>切換</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
     </div>
     <div class="admin-panel">
-        <div class="admin-header"><h3>🏷️ 產業細項管理</h3></div>
-        <div class="admin-form">
-            <div class="row">
-                <select id="newAdminCat"></select>
-                <input id="newAdminInd" placeholder="細項名稱">
-                <button class="btn-sm" style="background:var(--primary-color); color:white" onclick="addAdminIndustry()">新增</button>
-            </div>
+        <h3>🏷️ 產業項目管理</h3>
+        <div class="row">
+            <select id="newAdminCat"></select>
+            <input id="newAdminInd" placeholder="細項名稱">
+            <button class="btn-sm" style="background:var(--primary-color); padding:10px" onclick="addAdminIndustry()">新增</button>
         </div>
-        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>大類</th><th>名稱</th><th>操作</th></tr></thead><tbody id="admin-industry-list"></tbody></table></div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>大類</th><th>細項</th><th>操作</th></tr></thead><tbody id="admin-industry-list"></tbody></table></div>
     </div>
 </div>
 
@@ -217,31 +197,31 @@
         <select id="gridEditInd" style="width:100%; margin-bottom:15px"></select>
         <div style="display:flex; gap:10px">
             <button onclick="closeGridEditModal()" style="flex:1; padding:12px; background:#eee; border:none; border-radius:8px">取消</button>
-            <button onclick="saveGridEdit()" style="flex:1; padding:12px; background:var(--primary-color); color:white; border:none; border-radius:8px; font-weight:bold">儲存</button>
+            <button onclick="saveGridEdit()" style="flex:1; padding:12px; background:var(--primary-color); color:white; border-radius:8px; font-weight:bold; border:none;">儲存</button>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="logModal">
     <div class="modal">
-        <h3 id="modalTitle">新增面談紀錄</h3>
+        <h3 id="modalTitle">面談紀錄</h3>
         <div id="logHistoryContainer"></div>
-        <textarea id="logContent" rows="3" placeholder="輸入紀錄..."></textarea>
+        <textarea id="logContent" rows="3" placeholder="請輸入面談重點..."></textarea>
         <div style="margin-top:15px; text-align:right">
-            <button class="btn-sm" style="background:#eee" onclick="closeLogModal()">關閉</button>
-            <button class="btn-sm" style="background:var(--primary-color); color:white" onclick="saveLog()">儲存</button>
+            <button class="btn-sm" style="background:#eee; color:#333" onclick="closeLogModal()">關閉</button>
+            <button class="btn-sm" style="background:var(--primary-color)" onclick="saveLog()">儲存</button>
         </div>
     </div>
 </div>
 
 <script>
-    let currentMember = null, industryMap = {}, allFlat = [], gridData = {}, myContacts = [];
+    let currUser = null, indMap = {}, allFlat = [], gridData = {}, myContacts = [];
 
     async function login() {
         const n = document.getElementById('loginName').value, p = document.getElementById('loginPwd').value;
         const { data, error } = await db.from('members').select('*').eq('name', n).eq('password', p).single();
         if(error || !data) return alert("登入失敗");
-        currentMember = data;
+        currUser = data;
         document.getElementById('identity-overlay').style.display = 'none';
         document.getElementById('displayUser').innerText = n;
         if(data.role === 'admin') document.getElementById('adminTabBtn').style.display = 'block';
@@ -250,21 +230,21 @@
 
     async function init() {
         await loadIndustries();
-        renderGridStructure();
-        await loadGrid();
+        renderGridBase();
+        await loadMyGrid();
         await loadContacts();
         await loadOverview();
     }
 
     async function loadIndustries() {
         const { data } = await db.from('industries').select('*').order('category');
-        industryMap = {}; allFlat = [];
+        indMap = {}; allFlat = [];
         data.forEach(r => {
-            if(!industryMap[r.category]) industryMap[r.category] = [];
-            industryMap[r.category].push(r.name);
+            if(!indMap[r.category]) indMap[r.category] = [];
+            indMap[r.category].push(r.name);
             allFlat.push({cat: r.category, name: r.name});
         });
-        const opts = Object.keys(industryMap).map(c => `<option value="${c}">${c}</option>`).join('');
+        const opts = Object.keys(indMap).map(c => `<option value="${c}">${c}</option>`).join('');
         ['cCategory', 'gridEditCat', 'newAdminCat'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.innerHTML = opts;
@@ -274,129 +254,140 @@
 
     function onCRMCatChange() {
         const cat = document.getElementById('cCategory').value;
-        document.getElementById('cIndustry').innerHTML = industryMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
+        document.getElementById('cIndustry').innerHTML = indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
     }
 
     function onSearchInput(scope) {
-        const kw = document.getElementById(`${scope}SearchInput`).value.toLowerCase();
+        const input = document.getElementById(`${scope}SearchInput`);
         const drop = document.getElementById(`${scope}SearchDropdown`);
+        const kw = input.value.toLowerCase();
         if(!kw) { drop.style.display = 'none'; return; }
-        const matched = allFlat.filter(i => i.name.toLowerCase().includes(kw)).slice(0, 10);
-        drop.innerHTML = matched.map(i => `<div class="search-dropdown-item" onclick="selectSearchItem('${scope}','${i.cat}','${i.name}')">${i.name} <small>(${i.cat})</small></div>`).join('');
+        const matched = allFlat.filter(i => i.name.toLowerCase().includes(kw)).slice(0, 8);
+        drop.innerHTML = matched.map(i => `<div class="search-dropdown-item" onclick="selectItem('${scope}','${i.cat}','${i.name}')">${i.name} <small>(${i.cat})</small></div>`).join('');
         drop.style.display = 'block';
     }
 
-    function selectSearchItem(scope, cat, name) {
+    function selectItem(scope, cat, name) {
         if(scope === 'crm') {
             document.getElementById('cCategory').value = cat; onCRMCatChange();
             document.getElementById('cIndustry').value = name;
         } else {
             document.getElementById('gridEditCat').value = cat;
-            document.getElementById('gridEditInd').innerHTML = industryMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
+            document.getElementById('gridEditInd').innerHTML = indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
             document.getElementById('gridEditInd').value = name;
         }
         document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
     }
 
-    function renderGridStructure() {
+    function renderGridBase() {
         const m = document.getElementById('mandala'); m.innerHTML = '';
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className = 'sub-grid';
             for(let c=0; c<9; c++) {
-                let cell = document.createElement('div');
-                cell.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
-                cell.innerHTML = `<div class="grid-select" id="g${g}-c${c}" onclick="openEditModal('g${g}-c${c}')"></div>`;
-                sub.appendChild(cell);
+                let div = document.createElement('div');
+                div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
+                div.innerHTML = `<div class="grid-select" id="g${g}-c${c}" onclick="openEdit('${g}','${c}')"></div>`;
+                sub.appendChild(div);
             }
             m.appendChild(sub);
         }
     }
 
-    async function loadGrid() {
-        const { data } = await db.from('user_grids').select('*').eq('member_id', currentMember.id);
+    async function loadMyGrid() {
+        const { data } = await db.from('user_grids').select('*').eq('member_id', currUser.id);
         data?.forEach(d => {
             const el = document.getElementById(d.grid_index);
             if(el) { el.innerText = d.content; gridData[d.grid_index] = d.content; }
         });
     }
 
-    let curCell = null;
-    function openEditModal(id) {
+    let curCellId = null;
+    function openEdit(g, c) {
+        const id = `g${g}-c${c}`;
         if(id.includes('c4') && id !== 'g4-c4') return;
-        curCell = id; 
+        curCellId = id; 
         document.getElementById('gridSearchInput').value = '';
         document.getElementById('gridEditModal').style.display = 'flex';
     }
     function closeGridEditModal() { document.getElementById('gridEditModal').style.display = 'none'; }
     function onGridEditCatChange() {
         const cat = document.getElementById('gridEditCat').value;
-        document.getElementById('gridEditInd').innerHTML = industryMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
+        document.getElementById('gridEditInd').innerHTML = indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
     }
 
     async function saveGridEdit() {
         const val = document.getElementById('gridEditInd').value;
-        await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: curCell, content: val }, { onConflict: 'member_id, grid_index' });
-        if(curCell.startsWith('g4-')) {
-            const col = curCell.split('c')[1];
-            if(col !== '4') await db.from('user_grids').upsert({ member_id: currentMember.id, grid_index: `g${col}-c4`, content: val }, { onConflict: 'member_id, grid_index' });
+        await db.from('user_grids').upsert({ member_id: currUser.id, grid_index: curCellId, content: val }, { onConflict: 'member_id, grid_index' });
+        if(curCellId.startsWith('g4-')) {
+            const col = curCellId.split('c')[1];
+            if(col !== '4') await db.from('user_grids').upsert({ member_id: currUser.id, grid_index: `g${col}-c4`, content: val }, { onConflict: 'member_id, grid_index' });
         }
         location.reload();
     }
 
+    /* 精髓：戰略判別邏輯 */
+    function getStrategy(trust, need) {
+        if ((trust === 'A' || trust === 'B') && (need === 'X' || need === 'Y')) return { text: '🔥 甜蜜區', cls: 'tag-pink' };
+        if ((trust === 'A' || trust === 'B') && need === 'Z') return { text: '🤝 主動了解', cls: 'tag-blue' };
+        if ((trust === 'C' || trust === 'D') && need === 'X') return { text: '✨ 建立信任', cls: 'tag-yellow' };
+        return { text: '🌱 有空再了解', cls: 'tag-green' };
+    }
+
     async function loadContacts() {
-        const { data } = await db.from('user_contacts').select('*').eq('member_id', currentMember.id).order('created_at', {ascending: false});
+        const { data } = await db.from('user_contacts').select('*').eq('member_id', currUser.id).order('created_at', {ascending: false});
         myContacts = data || [];
-        document.getElementById('contact-list').innerHTML = myContacts.map((c, i) => `
-            <tr>
-                <td>${(c.trust_level==='A')?'🔥甜蜜':'🌱待辦'}</td>
+        document.getElementById('contact-list').innerHTML = myContacts.map((c, i) => {
+            const strat = getStrategy(c.trust_level, c.need_level);
+            return `<tr>
+                <td><span class="tag ${strat.cls}">${strat.text}</span></td>
                 <td><b>${c.name}</b><br><small>${c.industry}</small></td>
-                <td><button class="btn-sm btn-edit" onclick="openLogModal(${i})">面談 (${c.logs?.length||0})</button></td>
+                <td><button class="btn-sm btn-edit" onclick="openLog(${i})">紀錄 (${c.logs?.length||0})</button></td>
                 <td><button class="btn-sm btn-del" onclick="delC('${c.id}')">✕</button></td>
-            </tr>`).join('');
+            </tr>`;
+        }).join('');
     }
 
     async function addContact() {
         const n = document.getElementById('cName').value, i = document.getElementById('cIndustry').value;
-        if(!n) return;
-        await db.from('user_contacts').insert({ member_id: currentMember.id, owner_name: currentMember.name, name: n, industry: i, trust_level: document.getElementById('cTrust').value, need_level: document.getElementById('cNeed').value, logs: [] });
+        if(!n) return alert("請填寫姓名");
+        await db.from('user_contacts').insert({ member_id: currUser.id, owner_name: currUser.name, name: n, industry: i, trust_level: document.getElementById('cTrust').value, need_level: document.getElementById('cNeed').value, logs: [] });
         document.getElementById('cName').value = ''; loadContacts();
     }
 
-    async function delC(id) { if(confirm("刪除？")) { await db.from('user_contacts').delete().eq('id', id); loadContacts(); } }
+    async function delC(id) { if(confirm("確定刪除？")) { await db.from('user_contacts').delete().eq('id', id); loadContacts(); } }
 
     let curLogIdx = -1;
-    function openLogModal(idx) {
+    function openLog(idx) {
         curLogIdx = idx; const c = myContacts[idx];
         document.getElementById('modalTitle').innerText = c.name + " 面談紀錄";
-        document.getElementById('logHistoryContainer').innerHTML = (c.logs || []).reverse().map(l => `<div class="log-entry"><b>${l.date}:</b> ${l.msg}</div>`).join('');
+        document.getElementById('logHistoryContainer').innerHTML = (c.logs || []).reverse().map(l => `<div class="log-entry"><b>${l.date}:</b><br>${l.msg}</div>`).join('');
         document.getElementById('logModal').style.display = 'flex';
     }
     function closeLogModal() { document.getElementById('logModal').style.display = 'none'; }
     async function saveLog() {
-        const msg = document.getElementById('logContent').value;
-        if(!msg) return;
+        const msg = document.getElementById('logContent').value; if(!msg) return;
         const c = myContacts[curLogIdx];
         const newLogs = c.logs || [];
-        newLogs.push({ date: new Date().toLocaleDateString(), msg });
+        newLogs.push({ date: new Date().toLocaleString(), msg });
         await db.from('user_contacts').update({ logs: newLogs }).eq('id', c.id);
         document.getElementById('logContent').value = ''; closeLogModal(); loadContacts();
     }
 
     async function loadOverview() {
         const { data: gr } = await db.from('user_grids').select('content');
-        const count = {}; gr.forEach(r => { if(r.content) count[r.content] = (count[r.content]||0)+1; });
-        const sd = Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0, 15);
-        const mx = sd[0]?.[1] || 1;
-        document.getElementById('rankingList').innerHTML = sd.map(([n, ct], i) => `
+        const countMap = {}; gr.forEach(r => { if(r.content) countMap[r.content] = (countMap[r.content]||0)+1; });
+        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0, 15);
+        const max = sorted[0]?.[1] || 1;
+        document.getElementById('rankingList').innerHTML = sorted.map(([n, ct], i) => `
             <div class="rank-item">
                 <div class="rank-no">${i+1}</div>
-                <div style="width:100px; font-weight:bold">${n}</div>
-                <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/mx)*100}%"></div></div>
-                <div style="margin-left:10px">${ct}人</div>
+                <div class="rank-name">${n}</div>
+                <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/max)*100}%"></div></div>
+                <div style="font-size:0.8rem; margin-left:10px;">${ct} 人</div>
             </div>`).join('');
 
         const { data: ms } = await db.from('members').select('id, name').order('name');
-        document.getElementById('partnerSelect').innerHTML = '<option value="">-- 選擇夥伴 --</option>' + ms.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('partnerSelect').innerHTML = '<option value="">-- 選擇夥伴查看地圖 --</option>' + ms.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
     }
 
     async function loadPartnerGrid() {
@@ -410,8 +401,9 @@
             let sub = document.createElement('div'); sub.className = 'sub-grid';
             for(let c=0; c<9; c++) {
                 const cell = data.find(x => x.grid_index === `g${g}-c${c}`);
-                let div = document.createElement('div'); div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
-                div.style.fontSize = '10px'; div.innerText = cell ? cell.content : '';
+                let div = document.createElement('div');
+                div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
+                div.style.fontSize = '9px'; div.innerText = cell ? cell.content : '';
                 sub.appendChild(div);
             }
             area.appendChild(sub);
@@ -420,36 +412,32 @@
     }
 
     async function loadMatches() {
-        const res = document.getElementById('match-results'); res.innerHTML = "搜尋中...";
+        const res = document.getElementById('match-results'); res.innerHTML = "🔍 搜尋中...";
         const needs = Object.values(gridData);
-        const { data } = await db.from('user_contacts').select('*').neq('member_id', currentMember.id).in('industry', needs);
+        const { data } = await db.from('user_contacts').select('*').neq('member_id', currUser.id).in('industry', needs);
         if(!data?.length) { res.innerHTML = "暫無匹配"; return; }
-        res.innerHTML = data.map(c => `
-            <div class="match-card">
-                <div class="match-info"><h4>${c.name} (${c.industry})</h4><p>引薦人: <b>${c.owner_name}</b></p></div>
-                <div style="text-align:right"><span class="tag tag-pink">信任: ${c.trust_level}</span><br><span class="tag tag-green">需求: ${c.need_level}</span></div>
-            </div>`).join('');
+        res.innerHTML = data.map(c => {
+            const strat = getStrategy(c.trust_level, c.need_level);
+            return `<div class="match-card ${c.trust_level==='A'?'sweet':''}">
+                <div><h4>${c.name} (${c.industry})</h4><p>引薦人: <b>${c.owner_name}</b></p></div>
+                <div style="text-align:right"><span class="tag ${strat.cls}">${strat.text}</span><br><small>信任:${c.trust_level} 需求:${c.need_level}</small></div>
+            </div>`;
+        }).join('');
     }
 
     async function loadAdminData() {
         const { data: mems } = await db.from('members').select('*').order('name');
-        document.getElementById('member-list').innerHTML = mems.map(m => `
-            <tr><td>${m.name}</td><td>${m.role}</td>
-            <td><button class="btn-sm btn-edit" onclick="toggleRole('${m.id}','${m.role}')">權限切換</button></td>
-            <td><button class="btn-sm" style="background:#444; color:white" onclick="resetPwd('${m.id}','${m.name}')">重設</button></td>
-            <td><button class="btn-sm btn-del" onclick="delM('${m.id}')">✕</button></td></tr>`).join('');
-        const { data: inds } = await db.from('industries').select('*').order('category');
-        document.getElementById('admin-industry-list').innerHTML = inds.map(i => `
-            <tr><td>${i.category}</td><td>${i.name}</td><td><button class="btn-sm btn-del" onclick="delInd(${i.id})">✕</button></td></tr>`).join('');
+        document.getElementById('member-list').innerHTML = mems.map(m => `<tr><td>${m.name}</td><td>${m.role}</td><td><button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">切換</button></td><td><button class="btn-sm btn-del" onclick="delM('${m.id}')">✕</button></td></tr>`).join('');
+        const { data: inds } = await db.from('industries').select('*').order('category').limit(30);
+        document.getElementById('admin-industry-list').innerHTML = inds.map(i => `<tr><td>${i.category}</td><td>${i.name}</td><td><button class="btn-sm btn-del" onclick="delI(${i.id})">✕</button></td></tr>`).join('');
     }
 
-    async function delInd(id) { if(confirm("刪產業？")) { await db.from('industries').delete().eq('id', id); loadAdminData(); } }
+    async function delI(id) { if(confirm("刪產業？")) { await db.from('industries').delete().eq('id', id); loadAdminData(); } }
     async function delM(id) { if(confirm("刪會員？")) { await db.from('members').delete().eq('id', id); loadAdminData(); } }
-    async function toggleRole(id, role) { await db.from('members').update({ role: role==='admin'?'user':'admin' }).eq('id', id); loadAdminData(); }
-    async function resetPwd(id, name) { const p = prompt("輸入新密碼"); if(p) { await db.from('members').update({ password: p }).eq('id', id); alert("密碼已重設"); } }
+    async function toggleR(id, r) { await db.from('members').update({ role: r==='admin'?'user':'admin' }).eq('id', id); loadAdminData(); }
     async function addAdminIndustry() {
-        const cat = document.getElementById('newAdminCat').value, name = document.getElementById('newAdminInd').value;
-        if(cat && name) { await db.from('industries').insert({ category: cat, name }); loadAdminData(); }
+        const c = document.getElementById('newAdminCat').value, n = document.getElementById('newAdminInd').value;
+        if(c && n) { await db.from('industries').insert({ category: c, name: n }); loadAdminData(); }
     }
 
     function switchTab(t) {
