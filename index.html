@@ -170,7 +170,7 @@
         </div>
         <div class="row">
             <select id="cCategory" onchange="onCRMCatChange()"></select>
-            <select id="cIndustry"></select>
+            <select id="cIndustry" onchange="onCRMIndChange()"></select>
         </div>
         <div class="row">
             <select id="cTrust">
@@ -224,7 +224,7 @@
             <div class="search-dropdown" id="gridSearchDropdown"></div>
         </div>
         <select id="gridEditCat" onchange="onGridEditCatChange()" style="width:100%; margin-bottom:10px"></select>
-        <select id="gridEditInd" style="width:100%; margin-bottom:15px"></select>
+        <select id="gridEditInd" onchange="onGridIndChange()" style="width:100%; margin-bottom:15px"></select>
         <div style="display:flex; gap:10px">
             <button onclick="closeGridEditModal()" style="flex:1; padding:12px; background:#eee; border:none; border-radius:8px">取消</button>
             <button onclick="saveGridEdit()" style="flex:1; padding:12px; background:var(--primary-color); color:white; border-radius:8px; font-weight:bold; border:none;">儲存</button>
@@ -289,7 +289,27 @@
     function onCRMCatChange() {
         const cat = document.getElementById('cCategory').value;
         if(!cat || !indMap[cat]) return;
-        document.getElementById('cIndustry').innerHTML = indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
+        document.getElementById('cIndustry').innerHTML =
+            indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('') +
+            `<option value="ADD_NEW" style="color:var(--primary-color); font-weight:bold;">➕ 新增至此分類...</option>`;
+    }
+
+    async function onCRMIndChange() {
+        const sel = document.getElementById('cIndustry');
+        if(sel.value !== 'ADD_NEW') return;
+        const cat = document.getElementById('cCategory').value;
+        const newName = prompt(`在【${cat}】新增細項，請輸入名稱：`);
+        if(!newName || !newName.trim()) { sel.value = ''; return; }
+        const name = newName.trim();
+        if(allFlat.some(i => i.name.toLowerCase() === name.toLowerCase())) { alert("此細項已存在！"); sel.value = ''; return; }
+        document.getElementById('loading').style.display = 'block';
+        await db.from('industries').insert({ category: cat, name });
+        if(!indMap[cat]) indMap[cat] = [];
+        indMap[cat].push(name);
+        allFlat.push({ cat, name });
+        onCRMCatChange();
+        document.getElementById('cIndustry').value = name;
+        document.getElementById('loading').style.display = 'none';
     }
 
     function onSearchInput(scope) {
@@ -379,13 +399,33 @@
     function onGridEditCatChange() {
         const cat = document.getElementById('gridEditCat').value;
         if(!cat || !indMap[cat]) return;
-        document.getElementById('gridEditInd').innerHTML = indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('');
+        document.getElementById('gridEditInd').innerHTML =
+            indMap[cat].map(i => `<option value="${i}">${i}</option>`).join('') +
+            `<option value="ADD_NEW_IND" style="color:var(--primary-color); font-weight:bold;">➕ 新增【細項】...</option>`;
+    }
+
+    async function onGridIndChange() {
+        const sel = document.getElementById('gridEditInd');
+        if(sel.value !== 'ADD_NEW_IND') return;
+        const cat = document.getElementById('gridEditCat').value;
+        const newName = prompt(`在【${cat}】新增細項，請輸入名稱：`);
+        if(!newName || !newName.trim()) { sel.value = ''; return; }
+        const name = newName.trim();
+        if(allFlat.some(i => i.name.toLowerCase() === name.toLowerCase())) { alert("此細項已存在！"); sel.value = ''; return; }
+        document.getElementById('loading').style.display = 'block';
+        await db.from('industries').insert({ category: cat, name });
+        if(!indMap[cat]) indMap[cat] = [];
+        indMap[cat].push(name);
+        allFlat.push({ cat, name });
+        onGridEditCatChange();
+        document.getElementById('gridEditInd').value = name;
+        document.getElementById('loading').style.display = 'none';
     }
 
     // ✅ 修正：移除 location.reload()，改為直接更新畫面
     async function saveGridEdit() {
         const val = document.getElementById('gridEditInd').value;
-        if(!val) return alert("請選擇產業項目");
+        if(!val || val === 'ADD_NEW_IND') return alert("請選擇產業項目");
         document.getElementById('loading').style.display = 'block';
 
         await db.from('user_grids').upsert(
