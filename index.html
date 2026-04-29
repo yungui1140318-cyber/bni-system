@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260425-冠瑋DEBUG版)</title>
+    <title>人脈系統 (Ver 20260429-多分會版)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -41,6 +41,11 @@
 
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; }
+
+        /* 分會篩選 pills */
+        .branch-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+        .branch-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1.5px solid #ddd; background: #fff; color: #666; cursor: pointer; transition: all 0.15s; }
+        .branch-pill.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
         /* Ranking UI */
         .ranking-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 4px solid var(--primary-color); }
@@ -141,11 +146,19 @@
     </div>
     
     <div class="ranking-panel section-highlight">
-        <span class="view-hint">🔍 想找誰合作？點選下方選單查看夥伴地圖</span>
+        <span class="view-hint">🔍 想找誰合作？先選分會，再選夥伴查看地圖</span>
         <h3 style="margin:0 0 12px 0; color:#2196f3">👤 夥伴產業地圖 (查看模式)</h3>
+
+        <!-- 分會篩選 pills -->
+        <div class="branch-filter" id="branchFilter">
+            <div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>
+        </div>
+
+        <!-- 人員下拉 -->
         <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:15px; font-size:1.1rem; border-radius:8px; border:2px solid #2196f3; background:#f7fbff; color:#1565c0; font-weight:bold;">
             <option value="">-- 請點我選擇夥伴 --</option>
         </select>
+
         <div id="partnerViewArea" style="display:none; margin-top:25px; border-top:1px dashed #ccc; padding-top:15px;">
             <div id="partnerLabel" style="font-weight:bold; margin-bottom:15px; color:var(--primary-color); font-size:1.1rem; text-align:center;"></div>
             <div id="partnerMandala" class="mandala"></div>
@@ -179,7 +192,6 @@
                 <option value="C">C. 信任度偏低</option>
                 <option value="D">D. 幾乎陌生</option>
             </select>
-            <!-- ✅ 修正：Y 和 Z 的 value 寫法改正 -->
             <select id="cNeed">
                 <option value="X">X. 需求極高</option>
                 <option value="Y">Y. 存在一般需求</option>
@@ -197,12 +209,22 @@
         <div class="row">
             <input id="newMemName" placeholder="姓名">
             <input id="newMemPwd" placeholder="密碼">
+            <!-- 分會選擇 -->
+            <select id="newMemBranch" style="min-width:100px"></select>
             <button class="btn-sm" style="background:#333; padding:10px" onclick="addNewMember()">新增帳號</button>
         </div>
     </div>
     <div class="admin-panel">
+        <h3>🏢 分會管理</h3>
+        <div class="row">
+            <input id="newBranchName" placeholder="新分會名稱">
+            <button class="btn-sm" style="background:var(--primary-color); padding:10px" onclick="addBranch()">新增分會</button>
+        </div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>分會名稱</th><th>刪除</th></tr></thead><tbody id="branch-list"></tbody></table></div>
+    </div>
+    <div class="admin-panel">
         <h3>👥 會員名單管理</h3>
-        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>角色</th><th>切換</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>分會</th><th>角色</th><th>切換</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
     </div>
     <div class="admin-panel">
         <h3>🏷️ 產業管理</h3>
@@ -246,6 +268,9 @@
 
 <script>
     let currUser = null, indMap = {}, allFlat = [], gridData = {}, myContacts = [];
+    let allMembers = []; // 所有會員快取（含分會資訊）
+    let allBranches = []; // 所有分會快取
+    let currentBranchFilter = ''; // 目前選擇的分會篩選
 
     async function login() {
         const n = document.getElementById('loginName').value.trim();
@@ -264,11 +289,53 @@
 
     async function init() {
         await loadIndustries();
+        await loadBranches();
         renderGridBase();
         await loadMyGrid();
         await loadContacts();
         await loadOverview();
     }
+
+    // ── 分會相關 ──────────────────────────────────────
+
+    async function loadBranches() {
+        const { data } = await db.from('branches').select('*').order('name');
+        allBranches = data || [];
+    }
+
+    function renderBranchPills(branches) {
+        const container = document.getElementById('branchFilter');
+        container.innerHTML = `<div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>`;
+        branches.forEach(b => {
+            const pill = document.createElement('div');
+            pill.className = 'branch-pill';
+            pill.textContent = b.name;
+            pill.onclick = function() { filterBranch(b.name, this); };
+            container.appendChild(pill);
+        });
+    }
+
+    function filterBranch(branchName, el) {
+        currentBranchFilter = branchName;
+        document.querySelectorAll('.branch-pill').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+        // 重新渲染夥伴下拉選單
+        renderPartnerSelect();
+        // 重置宮格顯示
+        document.getElementById('partnerViewArea').style.display = 'none';
+        document.getElementById('partnerSelect').value = '';
+    }
+
+    function renderPartnerSelect() {
+        const filtered = currentBranchFilter
+            ? allMembers.filter(m => m.branch === currentBranchFilter)
+            : allMembers;
+        document.getElementById('partnerSelect').innerHTML =
+            '<option value="">-- 請點我選擇夥伴 --</option>' +
+            filtered.map(m => `<option value="${m.id}">${m.name}${m.branch ? ' (' + m.branch + ')' : ''}</option>`).join('');
+    }
+
+    // ── 產業 ──────────────────────────────────────────
 
     async function loadIndustries() {
         const { data } = await db.from('industries').select('*').order('category');
@@ -336,6 +403,8 @@
         document.getElementById(`${scope}SearchInput`).value = `${cat} › ${name}`;
     }
 
+    // ── 81 宮格 ───────────────────────────────────────
+
     function renderGridBase() {
         const m = document.getElementById('mandala'); m.innerHTML = '';
         for(let g=0; g<9; g++) {
@@ -343,7 +412,6 @@
             for(let c=0; c<9; c++) {
                 let div = document.createElement('div');
                 div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
-                // c===4 且非中心格：核心欄不可編輯（與穩定版一致）
                 const clickable = !(c===4 && !(g===4 && c===4));
                 div.innerHTML = `<div class="grid-select" id="g${g}-c${c}" ${clickable ? `onclick="openEdit('${g}','${c}')"` : ''}></div>`;
                 sub.appendChild(div);
@@ -358,16 +426,14 @@
             const el = document.getElementById(d.grid_index);
             if(el) { el.innerText = d.content; gridData[d.grid_index] = d.content; }
         });
-        // 同步中心格的核心欄顯示
         syncCoreLabels();
     }
 
     function syncCoreLabels() {
-        const mapCenterToOuter = { 0:0, 1:1, 2:2, 3:3, 5:5, 6:6, 7:7, 8:8 };
         for(let i=0; i<9; i++) {
             if(i===4) continue;
             const centerVal = gridData[`g4-c${i}`] || '';
-            const targetId = `g${mapCenterToOuter[i]}-c4`;
+            const targetId = `g${i}-c4`;
             const el = document.getElementById(targetId);
             if(el) el.innerText = centerVal;
         }
@@ -379,7 +445,6 @@
         curCellId = id;
         document.getElementById('gridSearchInput').value = '';
         document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
-        // 預填現有值
         const currentVal = gridData[id] || '';
         if(currentVal && indMap) {
             for(const [cat, items] of Object.entries(indMap)) {
@@ -422,23 +487,17 @@
         document.getElementById('loading').style.display = 'none';
     }
 
-    // ✅ 修正：移除 location.reload()，改為直接更新畫面
     async function saveGridEdit() {
         const val = document.getElementById('gridEditInd').value;
         if(!val || val === 'ADD_NEW_IND') return alert("請選擇產業項目");
         document.getElementById('loading').style.display = 'block';
-
         await db.from('user_grids').upsert(
             { member_id: currUser.id, grid_index: curCellId, content: val },
             { onConflict: 'member_id, grid_index' }
         );
-
-        // 更新本地資料與畫面
         gridData[curCellId] = val;
         const el = document.getElementById(curCellId);
         if(el) el.innerText = val;
-
-        // 若是中心格的非中心欄，同步到對應外圍格的核心欄
         if(curCellId.startsWith('g4-')) {
             const col = parseInt(curCellId.split('c')[1]);
             if(col !== 4) {
@@ -452,10 +511,88 @@
                 if(outerEl) outerEl.innerText = val;
             }
         }
-
         document.getElementById('loading').style.display = 'none';
         closeGridEditModal();
     }
+
+    // ── 概覽 / 夥伴地圖 ──────────────────────────────
+
+    async function loadOverview() {
+        // 排行榜
+        const { data: gr } = await db.from('user_grids').select('content');
+        const countMap = {};
+        gr.forEach(r => { if(r.content) countMap[r.content] = (countMap[r.content]||0)+1; });
+        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0, 15);
+        const max = sorted[0]?.[1] || 1;
+        document.getElementById('rankingList').innerHTML = sorted.length
+            ? sorted.map(([n, ct], i) => `
+                <div class="rank-item">
+                    <div class="rank-no">${i+1}</div>
+                    <div style="flex:1; font-weight:bold">${n}</div>
+                    <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/max)*100}%"></div></div>
+                    <div style="font-size:0.8rem; margin-left:10px; color:#888">${ct} 人</div>
+                </div>`).join('')
+            : '<div style="text-align:center; padding:20px; color:#aaa">尚無資料</div>';
+
+        // 載入所有會員（含分會）
+        const { data: ms } = await db.from('members').select('id, name, branch').order('branch').order('name');
+        allMembers = ms || [];
+
+        // 渲染分會 pills
+        await loadBranches();
+        renderBranchPills(allBranches);
+
+        // 渲染夥伴下拉
+        renderPartnerSelect();
+    }
+
+    async function loadPartnerGrid() {
+        const mid = document.getElementById('partnerSelect').value;
+        if(!mid) { document.getElementById('partnerViewArea').style.display = 'none'; return; }
+        const { data } = await db.from('user_grids').select('*').eq('member_id', mid);
+        const sel = document.getElementById('partnerSelect');
+        const pName = sel.options[sel.selectedIndex].text;
+        document.getElementById('partnerLabel').innerText = pName + " 的產業地圖";
+        const area = document.getElementById('partnerMandala'); area.innerHTML = '';
+        for(let g=0; g<9; g++) {
+            let sub = document.createElement('div'); sub.className = 'sub-grid';
+            for(let c=0; c<9; c++) {
+                const cell = data ? data.find(x => x.grid_index === `g${g}-c${c}`) : null;
+                let div = document.createElement('div');
+                div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
+                div.innerHTML = `<div class="partner-cell-text" style="font-size:0.75rem; padding:2px; text-align:center;">${cell ? cell.content : ''}</div>`;
+                sub.appendChild(div);
+            }
+            area.appendChild(sub);
+        }
+        document.getElementById('partnerViewArea').style.display = 'block';
+    }
+
+    // ── 資源媒合 ──────────────────────────────────────
+
+    async function loadMatches() {
+        const res = document.getElementById('match-results');
+        res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">🔍 搜尋中...</div>';
+        const needs = [...new Set(Object.values(gridData).filter(v => v && v !== ''))];
+        if(!needs.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">請先在「產業鏈 81 宮格」中填寫需求產業。</div>'; return; }
+        const { data } = await db.from('user_contacts').select('*').neq('member_id', currUser.id).in('industry', needs);
+        if(!data?.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>'; return; }
+        res.innerHTML = data.map(c => {
+            const strat = getStrategy(c.trust_level, c.need_level);
+            return `<div class="match-card ${(c.trust_level==='A'||c.trust_level==='B')?'sweet':''}">
+                <div class="match-info">
+                    <h4>${c.name} (${c.industry})</h4>
+                    <p>持有者：<b>${c.owner_name}</b></p>
+                    <p>戰略：<span class="tag ${strat.cls}">${strat.text}</span></p>
+                </div>
+                <div style="text-align:right; font-size:0.85rem; color:#888">
+                    信任:${c.trust_level} / 需求:${c.need_level}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── CRM ───────────────────────────────────────────
 
     function getStrategy(trust, need) {
         if ((trust === 'A' || trust === 'B') && (need === 'X' || need === 'Y')) return { text: '🔥 甜蜜區', cls: 'tag-pink' };
@@ -511,7 +648,7 @@
         document.getElementById('modalTitle').innerText = c.name + " 面談紀錄";
         const logs = c.logs || [];
         document.getElementById('logHistoryContainer').innerHTML = logs.length
-            ? [...logs].reverse().map((l, i) => `<div class="log-entry"><b style="color:#999; font-size:0.8rem">${l.date}</b><div style="margin-top:4px">${l.content || l.msg || ''}</div></div>`).join('')
+            ? [...logs].reverse().map((l) => `<div class="log-entry"><b style="color:#999; font-size:0.8rem">${l.date}</b><div style="margin-top:4px">${l.content || l.msg || ''}</div></div>`).join('')
             : '<div style="text-align:center; padding:15px; color:#aaa">目前無紀錄</div>';
         document.getElementById('logContent').value = '';
         document.getElementById('logModal').style.display = 'flex';
@@ -534,78 +671,31 @@
         loadContacts();
     }
 
-    async function loadOverview() {
-        const { data: gr } = await db.from('user_grids').select('content');
-        const countMap = {};
-        gr.forEach(r => { if(r.content) countMap[r.content] = (countMap[r.content]||0)+1; });
-        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0, 15);
-        const max = sorted[0]?.[1] || 1;
-        document.getElementById('rankingList').innerHTML = sorted.length
-            ? sorted.map(([n, ct], i) => `
-                <div class="rank-item">
-                    <div class="rank-no">${i+1}</div>
-                    <div style="flex:1; font-weight:bold">${n}</div>
-                    <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/max)*100}%"></div></div>
-                    <div style="font-size:0.8rem; margin-left:10px; color:#888">${ct} 人</div>
-                </div>`).join('')
-            : '<div style="text-align:center; padding:20px; color:#aaa">尚無資料</div>';
-
-        const { data: ms } = await db.from('members').select('id, name').order('name');
-        document.getElementById('partnerSelect').innerHTML = '<option value="">-- 請點我選擇夥伴 --</option>'
-            + (ms || []).map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-    }
-
-    async function loadPartnerGrid() {
-        const mid = document.getElementById('partnerSelect').value;
-        if(!mid) { document.getElementById('partnerViewArea').style.display = 'none'; return; }
-        const { data } = await db.from('user_grids').select('*').eq('member_id', mid);
-        const pName = document.getElementById('partnerSelect').options[document.getElementById('partnerSelect').selectedIndex].text;
-        document.getElementById('partnerLabel').innerText = pName + " 的產業地圖";
-        const area = document.getElementById('partnerMandala'); area.innerHTML = '';
-        for(let g=0; g<9; g++) {
-            let sub = document.createElement('div'); sub.className = 'sub-grid';
-            for(let c=0; c<9; c++) {
-                const cell = data ? data.find(x => x.grid_index === `g${g}-c${c}`) : null;
-                let div = document.createElement('div');
-                div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
-                div.innerHTML = `<div class="partner-cell-text" style="font-size:0.75rem; padding:2px; text-align:center;">${cell ? cell.content : ''}</div>`;
-                sub.appendChild(div);
-            }
-            area.appendChild(sub);
-        }
-        document.getElementById('partnerViewArea').style.display = 'block';
-    }
-
-    async function loadMatches() {
-        const res = document.getElementById('match-results');
-        res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">🔍 搜尋中...</div>';
-        const needs = [...new Set(Object.values(gridData).filter(v => v && v !== ''))];
-        if(!needs.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">請先在「產業鏈 81 宮格」中填寫需求產業。</div>'; return; }
-        const { data } = await db.from('user_contacts').select('*').neq('member_id', currUser.id).in('industry', needs);
-        if(!data?.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>'; return; }
-        res.innerHTML = data.map(c => {
-            const strat = getStrategy(c.trust_level, c.need_level);
-            return `<div class="match-card ${(c.trust_level==='A'||c.trust_level==='B')?'sweet':''}">
-                <div class="match-info">
-                    <h4>${c.name} (${c.industry})</h4>
-                    <p>持有者：<b>${c.owner_name}</b></p>
-                    <p>戰略：<span class="tag ${strat.cls}">${strat.text}</span></p>
-                </div>
-                <div style="text-align:right; font-size:0.85rem; color:#888">
-                    信任:${c.trust_level} / 需求:${c.need_level}
-                </div>
-            </div>`;
-        }).join('');
-    }
+    // ── 後台 ──────────────────────────────────────────
 
     async function loadAdminData() {
-        const { data: mems } = await db.from('members').select('*').order('name');
+        // 分會清單
+        await loadBranches();
+        document.getElementById('branch-list').innerHTML = allBranches.map(b => `<tr>
+            <td>${b.name}</td>
+            <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
+        </tr>`).join('');
+
+        // 新增會員的分會選單
+        document.getElementById('newMemBranch').innerHTML =
+            allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+
+        // 會員清單
+        const { data: mems } = await db.from('members').select('*').order('branch').order('name');
         document.getElementById('member-list').innerHTML = (mems || []).map(m => `<tr>
             <td>${m.name}</td>
+            <td><span style="font-size:0.85rem; color:#555">${m.branch || '—'}</span></td>
             <td>${m.role === 'admin' ? '🔴 管理員' : '🔵 會員'}</td>
             <td><button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">切換</button></td>
             <td><button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button></td>
         </tr>`).join('');
+
+        // 產業清單
         const { data: inds } = await db.from('industries').select('*').order('category').order('name');
         document.getElementById('admin-industry-list').innerHTML = (inds || []).map(i => `<tr>
             <td>${i.category}</td><td>${i.name}</td>
@@ -613,12 +703,31 @@
         </tr>`).join('');
     }
 
+    async function addBranch() {
+        const name = document.getElementById('newBranchName').value.trim();
+        if(!name) return alert("請輸入分會名稱");
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('branches').insert({ name });
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("新增失敗：" + error.message);
+        document.getElementById('newBranchName').value = '';
+        await loadAdminData();
+    }
+
+    async function delBranch(id, name) {
+        if(confirm(`刪除分會【${name}】？\n（該分會的會員不會被刪除，但分會欄位會變空白）`)) {
+            await db.from('branches').delete().eq('id', id);
+            await loadAdminData();
+        }
+    }
+
     async function addNewMember() {
         const n = document.getElementById('newMemName').value.trim();
         const p = document.getElementById('newMemPwd').value.trim();
+        const b = document.getElementById('newMemBranch').value;
         if(!n || !p) return alert("請填姓名密碼");
         document.getElementById('loading').style.display = 'block';
-        const { error } = await db.from('members').insert({ name: n, password: p, role: 'user' });
+        const { error } = await db.from('members').insert({ name: n, password: p, role: 'user', branch: b });
         document.getElementById('loading').style.display = 'none';
         if(error) return alert("新增失敗：" + error.message);
         alert("新增成功！");
@@ -649,6 +758,8 @@
         document.getElementById('loading').style.display = 'none';
     }
 
+    // ── Tab 切換 ──────────────────────────────────────
+
     function switchTab(t, btn) {
         document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -661,7 +772,6 @@
 
     function logout() { location.reload(); }
 
-    // 點擊外部關閉搜尋下拉
     document.addEventListener('click', function(e) {
         if(!e.target.closest('.search-industry-wrapper')) {
             document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
