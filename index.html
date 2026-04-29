@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>人脈系統 (Ver 20260429-多分會版)</title>
+    <title>雲貴人脈系統 (Ver 20260429-多分會版v2)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -224,7 +224,7 @@
     </div>
     <div class="admin-panel">
         <h3>👥 會員名單管理</h3>
-        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>分會</th><th>角色</th><th>切換</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>分會</th><th>角色</th><th>編輯</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
     </div>
     <div class="admin-panel">
         <h3>🏷️ 產業管理</h3>
@@ -579,10 +579,11 @@
         if(!data?.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>'; return; }
         res.innerHTML = data.map(c => {
             const strat = getStrategy(c.trust_level, c.need_level);
+            const ownerLabel = c.owner_branch ? `${c.owner_name}（${c.owner_branch}）` : c.owner_name;
             return `<div class="match-card ${(c.trust_level==='A'||c.trust_level==='B')?'sweet':''}">
                 <div class="match-info">
                     <h4>${c.name} (${c.industry})</h4>
-                    <p>持有者：<b>${c.owner_name}</b></p>
+                    <p>持有者：<b>${ownerLabel}</b></p>
                     <p>戰略：<span class="tag ${strat.cls}">${strat.text}</span></p>
                 </div>
                 <div style="text-align:right; font-size:0.85rem; color:#888">
@@ -623,7 +624,7 @@
         if(!i) return alert("請選擇產業項目");
         document.getElementById('loading').style.display = 'block';
         await db.from('user_contacts').insert({
-            member_id: currUser.id, owner_name: currUser.name, name: n, industry: i,
+            member_id: currUser.id, owner_name: currUser.name, owner_branch: currUser.branch || '', name: n, industry: i,
             trust_level: document.getElementById('cTrust').value,
             need_level: document.getElementById('cNeed').value,
             logs: []
@@ -691,7 +692,11 @@
             <td>${m.name}</td>
             <td><span style="font-size:0.85rem; color:#555">${m.branch || '—'}</span></td>
             <td>${m.role === 'admin' ? '🔴 管理員' : '🔵 會員'}</td>
-            <td><button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">切換</button></td>
+            <td>
+                <button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')" title="切換角色">角色</button>
+                <button class="btn-sm" style="background:#ff9800" onclick="changePwd('${m.id}','${m.name}')" title="改密碼">密碼</button>
+                <button class="btn-sm" style="background:#9c27b0" onclick="changeBranch('${m.id}','${m.name}','${m.branch||''}')" title="改分會">分會</button>
+            </td>
             <td><button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button></td>
         </tr>`).join('');
 
@@ -736,7 +741,29 @@
         loadAdminData();
     }
 
-    async function delI(id, name) {
+    async function changePwd(id, name) {
+        const newPwd = prompt(`【${name}】新密碼：`);
+        if(!newPwd || !newPwd.trim()) return;
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('members').update({ password: newPwd.trim() }).eq('id', id);
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("更新失敗：" + error.message);
+        alert("密碼已更新！");
+    }
+
+    async function changeBranch(id, name, currentBranch) {
+        const branchOpts = allBranches.map(b => b.name).join(' / ');
+        const newBranch = prompt(`【${name}】目前分會：${currentBranch || '未設定'}\n可用分會：${branchOpts}\n\n請輸入新分會名稱：`);
+        if(newBranch === null) return;
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('members').update({ branch: newBranch.trim() }).eq('id', id);
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("更新失敗：" + error.message);
+        alert("分會已更新！");
+        loadAdminData();
+    }
+
+
         if(confirm(`刪除【${name}】？`)) { await db.from('industries').delete().eq('id', id); loadAdminData(); await loadIndustries(); }
     }
     async function delM(id, name) {
