@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>雲貴人脈系統 (Ver 20260429-多分會版v2)</title>
+    <title>雲貴人脈系統 (Ver 20260429-多分會版v3)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
@@ -763,7 +763,7 @@
         loadAdminData();
     }
 
-
+    async function delI(id, name) {
         if(confirm(`刪除【${name}】？`)) { await db.from('industries').delete().eq('id', id); loadAdminData(); await loadIndustries(); }
     }
     async function delM(id, name) {
