@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>人脈資源媒合系統 (Ver 20260429-多分會版v4)</title>
+    <title>人脈資源媒合系統 (Ver 20260430)</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary-color: #cf2e2e; --bg-color: #f0f2f5; --text-color: #333; }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg-color); height: 100vh; display: flex; flex-direction: column; color: var(--text-color); overflow: hidden; }
 
-        /* Login */
         #identity-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary-color); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; }
         .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
         
-        /* Layout */
         header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
@@ -25,42 +23,57 @@
         .tabs { display: flex; background: #f0f0f0; border-radius: 50px; padding: 5px; max-width: 800px; margin: 0 auto; overflow-x: auto; }
         .tab-btn { flex: 1; padding: 10px; text-align: center; border-radius: 40px; cursor: pointer; font-weight: bold; color: #666; font-size: 0.9rem; min-width: 100px; white-space: nowrap; border: none; }
         .tab-btn.active { background: var(--primary-color); color: white; }
-        .tab-btn-admin { display: none; color: #d32f2f; } 
+        .tab-btn-admin { display: none; }
 
         .container { padding: 15px; max-width: 900px; margin: 0 auto; width: 100%; box-sizing: border-box; display: none; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
         .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Grid */
         .mandala { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding-bottom: 20px; }
         .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; border: 1px solid #ccc; aspect-ratio: 1/1; }
         .cell { border: 1px solid #eee; display: flex; align-items: center; justify-content: center; position: relative; background: #fff; overflow: hidden; padding: 2px; }
         .grid-select { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; cursor: pointer; text-align: center; word-break: break-all; line-height: 1.2; }
-        
-        .partner-cell-text { font-size: 0.9rem !important; font-weight: bold; color: #000; text-align: center; }
-
+        .partner-cell-text { font-size: 0.75rem; font-weight: bold; color: #000; text-align: center; padding: 2px; }
         .core .grid-select { background: #f5f5f5; font-weight: bold; color: #444; }
         .master .grid-select { background: var(--primary-color); color: white; font-weight: bold; }
 
-        /* 分會篩選 pills */
         .branch-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
         .branch-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1.5px solid #ddd; background: #fff; color: #666; cursor: pointer; transition: all 0.15s; }
         .branch-pill.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 
-        /* Ranking UI */
         .ranking-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 4px solid var(--primary-color); }
-        .rank-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; }
-        .rank-no { width: 26px; font-weight: bold; color: var(--primary-color); }
+        .rank-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; position: relative; cursor: pointer; }
+        .rank-no { width: 26px; font-weight: bold; color: var(--primary-color); flex-shrink: 0; }
         .rank-bar-wrap { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-        .rank-bar { height: 100%; background: var(--primary-color); transition: width 0.6s ease; }
+        .rank-bar { height: 100%; background: var(--primary-color); transition: width 0.6s ease; pointer-events: none; }
+        .rank-count { font-size: 0.8rem; color: #888; white-space: nowrap; flex-shrink: 0; }
 
-        /* Match Cards */
+        /* Tooltip */
+        .rank-tooltip {
+            display: none;
+            position: absolute;
+            left: 0; top: calc(100% + 4px);
+            background: #333; color: white;
+            padding: 8px 12px; border-radius: 8px;
+            font-size: 0.82rem; z-index: 5000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            line-height: 1.8; min-width: 180px; max-width: 280px;
+            pointer-events: none;
+        }
+        .rank-tooltip::before {
+            content: ''; position: absolute;
+            top: -6px; left: 16px;
+            border: 6px solid transparent;
+            border-top: none; border-bottom-color: #333;
+        }
+        .rank-item:hover .rank-tooltip,
+        .rank-item.tooltip-open .rank-tooltip { display: block; }
+
         .match-card { background: white; border-bottom: 1px solid #ddd; padding: 15px 5px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
         .match-card.sweet { background: #fff5f5; }
         .match-info h4 { margin: 0 0 8px 0; color: #d32f2f; font-size: 1.05rem; }
         .match-info p { margin: 4px 0; color: #555; font-size: 0.9rem; }
 
-        /* CRM Form & Table */
         .crm-form { background: white; padding: 15px; border-radius: 8px; border-top: 4px solid var(--primary-color); margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
@@ -71,18 +84,16 @@
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
 
         .tag { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .tag-pink { background-color: #fce4ec; color: #c2185b; } 
-        .tag-blue { background-color: #e3f2fd; color: #1565c0; } 
-        .tag-yellow { background-color: #fff9c4; color: #fbc02d; } 
-        .tag-green { background-color: #e8f5e9; color: #2e7d32; } 
+        .tag-pink { background-color: #fce4ec; color: #c2185b; }
+        .tag-blue { background-color: #e3f2fd; color: #1565c0; }
+        .tag-yellow { background-color: #fff9c4; color: #fbc02d; }
+        .tag-green { background-color: #e8f5e9; color: #2e7d32; }
 
-        /* Search Dropdown */
         .search-industry-wrapper { position: relative; margin-bottom: 10px; }
         .search-industry-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; outline: none; }
         .search-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; z-index: 9000; max-height: 200px; overflow-y: auto; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .search-dropdown-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
 
-        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center; }
         .modal { background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; }
         .close-x { position: absolute; top: 10px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #999; }
@@ -94,12 +105,8 @@
         .btn-del { background: #f44336; }
 
         #loading { position: fixed; top: 15px; right: 15px; background: rgba(0,0,0,0.8); color: white; padding: 6px 15px; border-radius: 20px; display: none; z-index: 20000; }
-        
-        /* 視覺引導強化 */
-        .section-highlight { border: 2px solid #2196f3 !important; box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15); }
+        .section-highlight { border: 2px solid #2196f3 !important; box-shadow: 0 4px 12px rgba(33,150,243,0.15); }
         .view-hint { font-size: 0.85rem; color: #2196f3; font-weight: bold; margin-bottom: 8px; display: block; }
-
-        /* Admin panel */
         .admin-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 
         @media (max-width: 768px) { .mandala { grid-template-columns: 1fr; } }
@@ -141,24 +148,19 @@
 
 <div id="overview-view" class="container active">
     <div class="ranking-panel">
-        <h3 style="margin:0 0 10px 0">🏆 分會產業需求排行 (Top 15)</h3>
+        <h3 style="margin:0 0 4px 0">🏆 分會產業需求排行 (Top 15)</h3>
+        <p style="margin:0 0 12px 0; font-size:0.82rem; color:#999">點選或移入統計條，查看哪些人需要此產業</p>
         <div id="rankingList">載入中...</div>
     </div>
-    
     <div class="ranking-panel section-highlight">
         <span class="view-hint">🔍 想找誰合作？先選分會，再選夥伴查看地圖</span>
         <h3 style="margin:0 0 12px 0; color:#2196f3">👤 夥伴產業地圖 (查看模式)</h3>
-
-        <!-- 分會篩選 pills -->
         <div class="branch-filter" id="branchFilter">
             <div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>
         </div>
-
-        <!-- 人員下拉 -->
         <select id="partnerSelect" onchange="loadPartnerGrid()" style="width:100%; padding:15px; font-size:1.1rem; border-radius:8px; border:2px solid #2196f3; background:#f7fbff; color:#1565c0; font-weight:bold;">
             <option value="">-- 請點我選擇夥伴 --</option>
         </select>
-
         <div id="partnerViewArea" style="display:none; margin-top:25px; border-top:1px dashed #ccc; padding-top:15px;">
             <div id="partnerLabel" style="font-weight:bold; margin-bottom:15px; color:var(--primary-color); font-size:1.1rem; text-align:center;"></div>
             <div id="partnerMandala" class="mandala"></div>
@@ -209,7 +211,6 @@
         <div class="row">
             <input id="newMemName" placeholder="姓名">
             <input id="newMemPwd" placeholder="密碼">
-            <!-- 分會選擇 -->
             <select id="newMemBranch" style="min-width:100px"></select>
             <button class="btn-sm" style="background:#333; padding:10px" onclick="addNewMember()">新增帳號</button>
         </div>
@@ -268,9 +269,7 @@
 
 <script>
     let currUser = null, indMap = {}, allFlat = [], gridData = {}, myContacts = [];
-    let allMembers = []; // 所有會員快取（含分會資訊）
-    let allBranches = []; // 所有分會快取
-    let currentBranchFilter = ''; // 目前選擇的分會篩選
+    let allMembers = [], allBranches = [], currentBranchFilter = '';
 
     async function login() {
         const n = document.getElementById('loginName').value.trim();
@@ -296,7 +295,7 @@
         await loadOverview();
     }
 
-    // ── 分會相關 ──────────────────────────────────────
+    // ── 分會 ──────────────────────────────────────────
 
     async function loadBranches() {
         const { data } = await db.from('branches').select('*').order('name');
@@ -319,9 +318,7 @@
         currentBranchFilter = branchName;
         document.querySelectorAll('.branch-pill').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
-        // 重新渲染夥伴下拉選單
         renderPartnerSelect();
-        // 重置宮格顯示
         document.getElementById('partnerViewArea').style.display = 'none';
         document.getElementById('partnerSelect').value = '';
     }
@@ -433,8 +430,7 @@
         for(let i=0; i<9; i++) {
             if(i===4) continue;
             const centerVal = gridData[`g4-c${i}`] || '';
-            const targetId = `g${i}-c4`;
-            const el = document.getElementById(targetId);
+            const el = document.getElementById(`g${i}-c4`);
             if(el) el.innerText = centerVal;
         }
     }
@@ -515,35 +511,60 @@
         closeGridEditModal();
     }
 
-    // ── 概覽 / 夥伴地圖 ──────────────────────────────
+    // ── 概覽 ──────────────────────────────────────────
 
     async function loadOverview() {
-        // 排行榜
-        const { data: gr } = await db.from('user_grids').select('content');
-        const countMap = {};
-        gr.forEach(r => { if(r.content) countMap[r.content] = (countMap[r.content]||0)+1; });
-        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0, 15);
-        const max = sorted[0]?.[1] || 1;
-        document.getElementById('rankingList').innerHTML = sorted.length
-            ? sorted.map(([n, ct], i) => `
-                <div class="rank-item">
-                    <div class="rank-no">${i+1}</div>
-                    <div style="flex:1; font-weight:bold">${n}</div>
-                    <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(ct/max)*100}%"></div></div>
-                    <div style="font-size:0.8rem; margin-left:10px; color:#888">${ct} 人</div>
-                </div>`).join('')
-            : '<div style="text-align:center; padding:20px; color:#aaa">尚無資料</div>';
+        // 抓所有宮格資料（含 member_id）
+        const { data: gr } = await db.from('user_grids').select('member_id, grid_index, content');
 
-        // 載入所有會員（含分會）
+        // 建立 member_id → name 對照
         const { data: ms } = await db.from('members').select('id, name, branch').order('branch').order('name');
         allMembers = ms || [];
+        const memberMap = {};
+        allMembers.forEach(m => { memberMap[m.id] = m.name; });
 
-        // 渲染分會 pills
+        // ✅ 只統計 g4 的八個非中心格，避免與外圍 c4 重複計算
+        const countMap = {}, nameMap = {};
+        (gr || []).forEach(r => {
+            if(!r.content) return;
+            if(!r.grid_index.startsWith('g4-')) return;
+            if(r.grid_index === 'g4-c4') return;
+            countMap[r.content] = (countMap[r.content] || 0) + 1;
+            if(!nameMap[r.content]) nameMap[r.content] = [];
+            const name = memberMap[r.member_id] || '未知';
+            if(!nameMap[r.content].includes(name)) nameMap[r.content].push(name);
+        });
+
+        const sorted = Object.entries(countMap).sort((a,b)=>b[1]-a[1]).slice(0, 15);
+        const max = sorted[0]?.[1] || 1;
+
+        document.getElementById('rankingList').innerHTML = sorted.length
+            ? sorted.map(([n, ct], i) => {
+                const names = (nameMap[n] || []).join('、');
+                return `<div class="rank-item"
+                    onclick="toggleTooltip(this)"
+                    onmouseenter="this.classList.add('tooltip-open')"
+                    onmouseleave="this.classList.remove('tooltip-open')">
+                    <div class="rank-no">${i+1}</div>
+                    <div style="flex:1; font-weight:bold">${n}</div>
+                    <div class="rank-bar-wrap">
+                        <div class="rank-bar" style="width:${(ct/max)*100}%"></div>
+                    </div>
+                    <div class="rank-count">${ct} 人</div>
+                    <div class="rank-tooltip">👥 需要此產業：<br>${names}</div>
+                </div>`;
+            }).join('')
+            : '<div style="text-align:center; padding:20px; color:#aaa">尚無資料</div>';
+
         await loadBranches();
         renderBranchPills(allBranches);
-
-        // 渲染夥伴下拉
         renderPartnerSelect();
+    }
+
+    function toggleTooltip(el) {
+        const isOpen = el.classList.contains('tooltip-open');
+        document.querySelectorAll('.rank-item').forEach(r => r.classList.remove('tooltip-open'));
+        if(!isOpen) el.classList.add('tooltip-open');
     }
 
     async function loadPartnerGrid() {
@@ -560,7 +581,7 @@
                 const cell = data ? data.find(x => x.grid_index === `g${g}-c${c}`) : null;
                 let div = document.createElement('div');
                 div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
-                div.innerHTML = `<div class="partner-cell-text" style="font-size:0.75rem; padding:2px; text-align:center;">${cell ? cell.content : ''}</div>`;
+                div.innerHTML = `<div class="partner-cell-text">${cell ? cell.content : ''}</div>`;
                 sub.appendChild(div);
             }
             area.appendChild(sub);
@@ -624,7 +645,8 @@
         if(!i) return alert("請選擇產業項目");
         document.getElementById('loading').style.display = 'block';
         await db.from('user_contacts').insert({
-            member_id: currUser.id, owner_name: currUser.name, owner_branch: currUser.branch || '', name: n, industry: i,
+            member_id: currUser.id, owner_name: currUser.name, owner_branch: currUser.branch || '',
+            name: n, industry: i,
             trust_level: document.getElementById('cTrust').value,
             need_level: document.getElementById('cNeed').value,
             logs: []
@@ -675,32 +697,25 @@
     // ── 後台 ──────────────────────────────────────────
 
     async function loadAdminData() {
-        // 分會清單
         await loadBranches();
         document.getElementById('branch-list').innerHTML = allBranches.map(b => `<tr>
             <td>${b.name}</td>
             <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
         </tr>`).join('');
-
-        // 新增會員的分會選單
         document.getElementById('newMemBranch').innerHTML =
             allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
-
-        // 會員清單
         const { data: mems } = await db.from('members').select('*').order('branch').order('name');
         document.getElementById('member-list').innerHTML = (mems || []).map(m => `<tr>
             <td>${m.name}</td>
             <td><span style="font-size:0.85rem; color:#555">${m.branch || '—'}</span></td>
             <td>${m.role === 'admin' ? '🔴 管理員' : '🔵 會員'}</td>
             <td>
-                <button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')" title="切換角色">角色</button>
-                <button class="btn-sm" style="background:#ff9800" onclick="changePwd('${m.id}','${m.name}')" title="改密碼">密碼</button>
-                <button class="btn-sm" style="background:#9c27b0" onclick="changeBranch('${m.id}','${m.name}','${m.branch||''}')" title="改分會">分會</button>
+                <button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">角色</button>
+                <button class="btn-sm" style="background:#ff9800" onclick="changePwd('${m.id}','${m.name}')">密碼</button>
+                <button class="btn-sm" style="background:#9c27b0" onclick="changeBranch('${m.id}','${m.name}','${m.branch||''}')">分會</button>
             </td>
             <td><button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button></td>
         </tr>`).join('');
-
-        // 產業清單
         const { data: inds } = await db.from('industries').select('*').order('category').order('name');
         document.getElementById('admin-industry-list').innerHTML = (inds || []).map(i => `<tr>
             <td>${i.category}</td><td>${i.name}</td>
@@ -802,6 +817,9 @@
     document.addEventListener('click', function(e) {
         if(!e.target.closest('.search-industry-wrapper')) {
             document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = 'none');
+        }
+        if(!e.target.closest('.rank-item')) {
+            document.querySelectorAll('.rank-item').forEach(r => r.classList.remove('tooltip-open'));
         }
     });
 </script>
