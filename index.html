@@ -13,7 +13,7 @@
         .box { background: white; padding: 30px; border-radius: 12px; width: 85%; max-width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .box input { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #ddd; border-radius: 8px; text-align: center; font-size: 1rem; box-sizing: border-box; }
         .box button { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: bold; }
-        
+
         header { background: var(--primary-color); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         header h1 { margin: 0; font-size: 1.1rem; }
         .user-tag { font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
@@ -40,6 +40,8 @@
         .branch-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
         .branch-pill { padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1.5px solid #ddd; background: #fff; color: #666; cursor: pointer; transition: all 0.15s; }
         .branch-pill.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .branch-pill.preparatory { border-color: #ff9800; color: #e65100; }
+        .branch-pill.preparatory.active { background: #ff9800; color: white; border-color: #ff9800; }
 
         .ranking-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-top: 4px solid var(--primary-color); }
         .rank-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f5f5f5; position: relative; cursor: pointer; }
@@ -48,7 +50,6 @@
         .rank-bar { height: 100%; background: var(--primary-color); transition: width 0.6s ease; pointer-events: none; }
         .rank-count { font-size: 0.8rem; color: #888; white-space: nowrap; flex-shrink: 0; }
 
-        /* Tooltip */
         .rank-tooltip {
             display: none;
             position: absolute;
@@ -78,7 +79,7 @@
         .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         input, select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; min-width: 120px; }
         .btn-main { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-        
+
         .std-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; border-radius: 8px; overflow: hidden; background: white; }
         .std-table th { background: #333; color: white; padding: 12px; text-align: left; }
         .std-table td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
@@ -88,6 +89,7 @@
         .tag-blue { background-color: #e3f2fd; color: #1565c0; }
         .tag-yellow { background-color: #fff9c4; color: #fbc02d; }
         .tag-green { background-color: #e8f5e9; color: #2e7d32; }
+        .tag-orange { background-color: #fff3e0; color: #e65100; }
 
         .search-industry-wrapper { position: relative; margin-bottom: 10px; }
         .search-industry-input { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; outline: none; }
@@ -108,6 +110,9 @@
         .section-highlight { border: 2px solid #2196f3 !important; box-shadow: 0 4px 12px rgba(33,150,243,0.15); }
         .view-hint { font-size: 0.85rem; color: #2196f3; font-weight: bold; margin-bottom: 8px; display: block; }
         .admin-panel { background: white; border-radius: 8px; padding: 15px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+        .partner-crm-area { margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 15px; }
+        .partner-crm-area table { font-size: 0.85rem; }
 
         @media (max-width: 768px) { .mandala { grid-template-columns: 1fr; } }
     </style>
@@ -153,8 +158,8 @@
         <div id="rankingList">載入中...</div>
     </div>
     <div class="ranking-panel section-highlight">
-        <span class="view-hint">🔍 想找誰合作？先選分會，再選夥伴查看地圖</span>
-        <h3 style="margin:0 0 12px 0; color:#2196f3">👤 夥伴產業地圖 (查看模式)</h3>
+        <span class="view-hint">🔍 想找誰合作？先選分會，再選夥伴查看地圖與人脈</span>
+        <h3 style="margin:0 0 12px 0; color:#2196f3">👤 夥伴資料查看</h3>
         <div class="branch-filter" id="branchFilter">
             <div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>
         </div>
@@ -163,7 +168,10 @@
         </select>
         <div id="partnerViewArea" style="display:none; margin-top:25px; border-top:1px dashed #ccc; padding-top:15px;">
             <div id="partnerLabel" style="font-weight:bold; margin-bottom:15px; color:var(--primary-color); font-size:1.1rem; text-align:center;"></div>
+            <!-- 81宮格 -->
             <div id="partnerMandala" class="mandala"></div>
+            <!-- 人脈變現表 -->
+            <div id="partnerCrmArea" class="partner-crm-area"></div>
         </div>
     </div>
 </div>
@@ -221,7 +229,7 @@
             <input id="newBranchName" placeholder="新分會名稱">
             <button class="btn-sm" style="background:var(--primary-color); padding:10px" onclick="addBranch()">新增分會</button>
         </div>
-        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>分會名稱</th><th>刪除</th></tr></thead><tbody id="branch-list"></tbody></table></div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>分會名稱</th><th>類型</th><th>切換類型</th><th>刪除</th></tr></thead><tbody id="branch-list"></tbody></table></div>
     </div>
     <div class="admin-panel">
         <h3>👥 會員名單管理</h3>
@@ -270,6 +278,8 @@
 <script>
     let currUser = null, indMap = {}, allFlat = [], gridData = {}, myContacts = [];
     let allMembers = [], allBranches = [], currentBranchFilter = '';
+    // branch name → type ('normal' | 'preparatory')
+    let branchTypeMap = {};
 
     async function login() {
         const n = document.getElementById('loginName').value.trim();
@@ -300,15 +310,18 @@
     async function loadBranches() {
         const { data } = await db.from('branches').select('*').order('name');
         allBranches = data || [];
+        branchTypeMap = {};
+        allBranches.forEach(b => { branchTypeMap[b.name] = b.type || 'normal'; });
     }
 
     function renderBranchPills(branches) {
         const container = document.getElementById('branchFilter');
         container.innerHTML = `<div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>`;
         branches.forEach(b => {
+            const isPre = (b.type || 'normal') === 'preparatory';
             const pill = document.createElement('div');
-            pill.className = 'branch-pill';
-            pill.textContent = b.name;
+            pill.className = 'branch-pill' + (isPre ? ' preparatory' : '');
+            pill.textContent = b.name + (isPre ? ' 🔸' : '');
             pill.onclick = function() { filterBranch(b.name, this); };
             container.appendChild(pill);
         });
@@ -514,16 +527,12 @@
     // ── 概覽 ──────────────────────────────────────────
 
     async function loadOverview() {
-        // 抓所有宮格資料（含 member_id）
         const { data: gr } = await db.from('user_grids').select('member_id, grid_index, content');
-
-        // 建立 member_id → name 對照
         const { data: ms } = await db.from('members').select('id, name, branch').order('branch').order('name');
         allMembers = ms || [];
         const memberMap = {};
         allMembers.forEach(m => { memberMap[m.id] = m.name; });
 
-        // ✅ 只統計 g4 的八個非中心格，避免與外圍 c4 重複計算
         const countMap = {}, nameMap = {};
         (gr || []).forEach(r => {
             if(!r.content) return;
@@ -570,15 +579,25 @@
     async function loadPartnerGrid() {
         const mid = document.getElementById('partnerSelect').value;
         if(!mid) { document.getElementById('partnerViewArea').style.display = 'none'; return; }
-        const { data } = await db.from('user_grids').select('*').eq('member_id', mid);
+
+        document.getElementById('loading').style.display = 'block';
+        const [{ data: gridRows }, { data: contacts }] = await Promise.all([
+            db.from('user_grids').select('*').eq('member_id', mid),
+            db.from('user_contacts').select('*').eq('member_id', mid).order('created_at', { ascending: false })
+        ]);
+        document.getElementById('loading').style.display = 'none';
+
         const sel = document.getElementById('partnerSelect');
         const pName = sel.options[sel.selectedIndex].text;
-        document.getElementById('partnerLabel').innerText = pName + " 的產業地圖";
-        const area = document.getElementById('partnerMandala'); area.innerHTML = '';
+        document.getElementById('partnerLabel').innerText = pName + " 的資料";
+
+        // 渲染 81 宮格
+        const area = document.getElementById('partnerMandala');
+        area.innerHTML = '';
         for(let g=0; g<9; g++) {
             let sub = document.createElement('div'); sub.className = 'sub-grid';
             for(let c=0; c<9; c++) {
-                const cell = data ? data.find(x => x.grid_index === `g${g}-c${c}`) : null;
+                const cell = gridRows ? gridRows.find(x => x.grid_index === `g${g}-c${c}`) : null;
                 let div = document.createElement('div');
                 div.className = `cell ${g===4&&c===4?'master':(c===4?'core':'')}`;
                 div.innerHTML = `<div class="partner-cell-text">${cell ? cell.content : ''}</div>`;
@@ -586,6 +605,33 @@
             }
             area.appendChild(sub);
         }
+
+        // 渲染人脈變現表
+        const crmArea = document.getElementById('partnerCrmArea');
+        if(contacts && contacts.length > 0) {
+            crmArea.innerHTML = `
+                <h4 style="margin:0 0 10px 0; color:var(--primary-color)">📋 人脈變現表（${contacts.length} 筆）</h4>
+                <div style="overflow-x:auto">
+                <table class="std-table">
+                    <thead><tr><th>策略</th><th>姓名</th><th>產業</th><th>信任</th><th>需求</th></tr></thead>
+                    <tbody>
+                        ${contacts.map(c => {
+                            const strat = getStrategy(c.trust_level, c.need_level);
+                            return `<tr>
+                                <td><span class="tag ${strat.cls}">${strat.text}</span></td>
+                                <td><b>${c.name}</b></td>
+                                <td><small style="color:#666">${c.industry}</small></td>
+                                <td style="text-align:center">${c.trust_level}</td>
+                                <td style="text-align:center">${c.need_level}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                </div>`;
+        } else {
+            crmArea.innerHTML = '<p style="text-align:center; color:#aaa; padding:15px 0">此夥伴尚無人脈資料</p>';
+        }
+
         document.getElementById('partnerViewArea').style.display = 'block';
     }
 
@@ -594,16 +640,50 @@
     async function loadMatches() {
         const res = document.getElementById('match-results');
         res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">🔍 搜尋中...</div>';
+
         const needs = [...new Set(Object.values(gridData).filter(v => v && v !== ''))];
-        if(!needs.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">請先在「產業鏈 81 宮格」中填寫需求產業。</div>'; return; }
-        const { data } = await db.from('user_contacts').select('*').neq('member_id', currUser.id).in('industry', needs);
-        if(!data?.length) { res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>'; return; }
-        res.innerHTML = data.map(c => {
+        if(!needs.length) {
+            res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">請先在「產業鏈 81 宮格」中填寫需求產業。</div>';
+            return;
+        }
+
+        await loadBranches();
+
+        const isAdmin = currUser.role === 'admin';
+        const myBranchType = branchTypeMap[currUser.branch] || 'normal';
+        const prepBranches = Object.entries(branchTypeMap)
+            .filter(([, t]) => t === 'preparatory')
+            .map(([name]) => name);
+
+        const { data } = await db.from('user_contacts')
+            .select('*')
+            .neq('member_id', currUser.id)
+            .in('industry', needs);
+
+        let filtered = data || [];
+
+        if(!isAdmin) {
+            if(myBranchType === 'preparatory') {
+                // 籌備會只能看自己分會的人脈
+                filtered = filtered.filter(c => c.owner_branch === currUser.branch);
+            } else {
+                // 一般分會看不到籌備會的人脈
+                filtered = filtered.filter(c => !prepBranches.includes(c.owner_branch));
+            }
+        }
+
+        if(!filtered.length) {
+            res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>';
+            return;
+        }
+
+        res.innerHTML = filtered.map(c => {
             const strat = getStrategy(c.trust_level, c.need_level);
             const ownerLabel = c.owner_branch ? `${c.owner_name}（${c.owner_branch}）` : c.owner_name;
+            const isPre = prepBranches.includes(c.owner_branch);
             return `<div class="match-card ${(c.trust_level==='A'||c.trust_level==='B')?'sweet':''}">
                 <div class="match-info">
-                    <h4>${c.name} (${c.industry})</h4>
+                    <h4>${c.name} (${c.industry}) ${isPre ? '<span class="tag tag-orange">籌備</span>' : ''}</h4>
                     <p>持有者：<b>${ownerLabel}</b></p>
                     <p>戰略：<span class="tag ${strat.cls}">${strat.text}</span></p>
                 </div>
@@ -698,12 +778,22 @@
 
     async function loadAdminData() {
         await loadBranches();
-        document.getElementById('branch-list').innerHTML = allBranches.map(b => `<tr>
-            <td>${b.name}</td>
-            <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
-        </tr>`).join('');
+        document.getElementById('branch-list').innerHTML = allBranches.map(b => {
+            const isPre = (b.type || 'normal') === 'preparatory';
+            const typeLabel = isPre
+                ? '<span class="tag tag-orange">🔸 籌備會</span>'
+                : '<span class="tag tag-green">🟢 一般分會</span>';
+            return `<tr>
+                <td>${b.name}</td>
+                <td>${typeLabel}</td>
+                <td><button class="btn-sm" style="background:${isPre?'#4caf50':'#ff9800'}" onclick="toggleBranchType('${b.id}','${b.type||'normal'}')">${isPre ? '改為一般' : '改為籌備會'}</button></td>
+                <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
+            </tr>`;
+        }).join('');
+
         document.getElementById('newMemBranch').innerHTML =
             allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+
         const { data: mems } = await db.from('members').select('*').order('branch').order('name');
         document.getElementById('member-list').innerHTML = (mems || []).map(m => `<tr>
             <td>${m.name}</td>
@@ -716,6 +806,7 @@
             </td>
             <td><button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button></td>
         </tr>`).join('');
+
         const { data: inds } = await db.from('industries').select('*').order('category').order('name');
         document.getElementById('admin-industry-list').innerHTML = (inds || []).map(i => `<tr>
             <td>${i.category}</td><td>${i.name}</td>
@@ -723,11 +814,20 @@
         </tr>`).join('');
     }
 
+    async function toggleBranchType(id, currentType) {
+        const newType = currentType === 'preparatory' ? 'normal' : 'preparatory';
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('branches').update({ type: newType }).eq('id', id);
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("更新失敗：" + error.message);
+        await loadAdminData();
+    }
+
     async function addBranch() {
         const name = document.getElementById('newBranchName').value.trim();
         if(!name) return alert("請輸入分會名稱");
         document.getElementById('loading').style.display = 'block';
-        const { error } = await db.from('branches').insert({ name });
+        const { error } = await db.from('branches').insert({ name, type: 'normal' });
         document.getElementById('loading').style.display = 'none';
         if(error) return alert("新增失敗：" + error.message);
         document.getElementById('newBranchName').value = '';
