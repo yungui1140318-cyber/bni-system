@@ -232,7 +232,17 @@
         <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>分會名稱</th><th>類型</th><th>切換類型</th><th>刪除</th></tr></thead><tbody id="branch-list"></tbody></table></div>
     </div>
     <div class="admin-panel" id="matchRequestPanel">
-        <h3>🔗 跨分會媒合申請</h3>
+        <h3>🔗 跨分會媒合管理</h3>
+        <!-- 系統管理員直接新增 -->
+        <div id="adminMatchForm" style="display:none; margin-bottom:12px;">
+            <div class="row">
+                <select id="adminMatchA" style="flex:1"></select>
+                <span style="line-height:2.5; color:#999; flex-shrink:0">↔</span>
+                <select id="adminMatchB" style="flex:1"></select>
+                <button class="btn-sm" style="background:#4caf50; padding:10px" onclick="adminAddMatch()">直接開啟</button>
+            </div>
+        </div>
+        <!-- 分會管理員申請 -->
         <div id="matchRequestForm" style="display:none; margin-bottom:12px;">
             <div class="row">
                 <select id="matchTargetBranch" style="flex:1"></select>
@@ -866,11 +876,17 @@
         const isSysAdmin = currUser.role === 'admin';
         const isBranchAdmin = currUser.role === 'branch_admin';
 
-        // 分會管理員才顯示申請表單
+        // 系統管理員直接新增表單
+        document.getElementById('adminMatchForm').style.display = isSysAdmin ? 'block' : 'none';
+        // 分會管理員申請表單
         document.getElementById('matchRequestForm').style.display = isBranchAdmin ? 'block' : 'none';
 
+        if(isSysAdmin) {
+            const opts = allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+            document.getElementById('adminMatchA').innerHTML = opts;
+            document.getElementById('adminMatchB').innerHTML = opts;
+        }
         if(isBranchAdmin) {
-            // 排除自己分會，填入可申請的目標分會
             document.getElementById('matchTargetBranch').innerHTML =
                 allBranches.filter(b => b.name !== currUser.branch)
                     .map(b => `<option value="${b.name}">${b.name}</option>`).join('');
@@ -902,6 +918,27 @@
                 </td>
             </tr>`).join('')
             : '<tr><td colspan="4" style="text-align:center; color:#aaa; padding:15px">尚無申請紀錄</td></tr>';
+    }
+
+    async function adminAddMatch() {
+        const a = document.getElementById('adminMatchA').value;
+        const b = document.getElementById('adminMatchB').value;
+        if(!a || !b) return alert("請選擇兩個分會");
+        if(a === b) return alert("不能選擇同一個分會");
+
+        const { data: exist } = await db.from('branch_match_requests')
+            .select('id')
+            .eq('status', 'approved')
+            .or(`and(from_branch.eq.${a},to_branch.eq.${b}),and(from_branch.eq.${b},to_branch.eq.${a})`);
+        if(exist && exist.length > 0) return alert("這兩個分會已經開啟媒合");
+
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('branch_match_requests').insert({
+            from_branch: a, to_branch: b, status: 'approved'
+        });
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("新增失敗：" + error.message);
+        await loadMatchRequests();
     }
 
     async function submitMatchRequest() {
