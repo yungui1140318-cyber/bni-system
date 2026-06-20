@@ -675,6 +675,14 @@
             .filter(([, t]) => t === 'preparatory')
             .map(([name]) => name);
 
+        // 取得會員當前分會對照表（避免依賴舊的 owner_branch）
+        const { data: memberData } = await db.from('members').select('id, name, branch');
+        const memberBranchMap = {}, memberNameMap = {};
+        (memberData || []).forEach(m => {
+            memberBranchMap[m.id] = m.branch || '';
+            memberNameMap[m.id] = m.name || '';
+        });
+
         // 取得與本分會已核准的媒合對象分會
         const { data: approvedReqs } = await db.from('branch_match_requests')
             .select('from_branch, to_branch')
@@ -694,10 +702,10 @@
         let filtered = data || [];
 
         if(!isAdmin) {
-            // 只保留核准範圍內的分會，並排除籌備會（除非籌備會本身）
             filtered = filtered.filter(c => {
-                if(!approvedBranches.has(c.owner_branch)) return false;
-                if(prepBranches.includes(c.owner_branch) && c.owner_branch !== myBranch) return false;
+                const realBranch = memberBranchMap[c.member_id] || c.owner_branch || '';
+                if(!approvedBranches.has(realBranch)) return false;
+                if(prepBranches.includes(realBranch) && realBranch !== myBranch) return false;
                 return true;
             });
         }
@@ -709,8 +717,10 @@
 
         res.innerHTML = filtered.map(c => {
             const strat = getStrategy(c.trust_level, c.need_level);
-            const ownerLabel = c.owner_branch ? `${c.owner_name}（${c.owner_branch}）` : c.owner_name;
-            const isPre = prepBranches.includes(c.owner_branch);
+            const realBranch = memberBranchMap[c.member_id] || c.owner_branch || '';
+            const ownerName = memberNameMap[c.member_id] || c.owner_name || '';
+            const ownerLabel = realBranch ? `${ownerName}（${realBranch}）` : ownerName;
+            const isPre = prepBranches.includes(realBranch);
             return `<div class="match-card ${(c.trust_level==='A'||c.trust_level==='B')?'sweet':''}">
                 <div class="match-info">
                     <h4>${c.name} (${c.industry}) ${isPre ? '<span class="tag tag-orange">籌備</span>' : ''}</h4>
