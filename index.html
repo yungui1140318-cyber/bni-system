@@ -231,6 +231,16 @@
         </div>
         <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>分會名稱</th><th>類型</th><th>切換類型</th><th>刪除</th></tr></thead><tbody id="branch-list"></tbody></table></div>
     </div>
+    <div class="admin-panel" id="matchRequestPanel">
+        <h3>🔗 跨分會媒合申請</h3>
+        <div id="matchRequestForm" style="display:none; margin-bottom:12px;">
+            <div class="row">
+                <select id="matchTargetBranch" style="flex:1"></select>
+                <button class="btn-sm" style="background:var(--primary-color); padding:10px" onclick="submitMatchRequest()">送出申請</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>申請分會</th><th>對象分會</th><th>狀態</th><th>操作</th></tr></thead><tbody id="match-request-list"></tbody></table></div>
+    </div>
     <div class="admin-panel">
         <h3>👥 會員名單管理</h3>
         <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>分會</th><th>角色</th><th>編輯</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
@@ -650,10 +660,21 @@
         await loadBranches();
 
         const isAdmin = currUser.role === 'admin';
-        const myBranchType = branchTypeMap[currUser.branch] || 'normal';
+        const myBranch = currUser.branch || '';
         const prepBranches = Object.entries(branchTypeMap)
             .filter(([, t]) => t === 'preparatory')
             .map(([name]) => name);
+
+        // 取得與本分會已核准的媒合對象分會
+        const { data: approvedReqs } = await db.from('branch_match_requests')
+            .select('from_branch, to_branch')
+            .eq('status', 'approved');
+
+        const approvedBranches = new Set([myBranch]);
+        (approvedReqs || []).forEach(r => {
+            if(r.from_branch === myBranch) approvedBranches.add(r.to_branch);
+            if(r.to_branch === myBranch) approvedBranches.add(r.from_branch);
+        });
 
         const { data } = await db.from('user_contacts')
             .select('*')
@@ -663,13 +684,12 @@
         let filtered = data || [];
 
         if(!isAdmin) {
-            if(myBranchType === 'preparatory') {
-                // 籌備會只能看自己分會的人脈
-                filtered = filtered.filter(c => c.owner_branch === currUser.branch);
-            } else {
-                // 一般分會看不到籌備會的人脈
-                filtered = filtered.filter(c => !prepBranches.includes(c.owner_branch));
-            }
+            // 只保留核准範圍內的分會，並排除籌備會（除非籌備會本身）
+            filtered = filtered.filter(c => {
+                if(!approvedBranches.has(c.owner_branch)) return false;
+                if(prepBranches.includes(c.owner_branch) && c.owner_branch !== myBranch) return false;
+                return true;
+            });
         }
 
         if(!filtered.length) {
@@ -815,6 +835,8 @@
                 allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
         }
 
+        await loadMatchRequests();
+
         // 系統管理員看全部；分會管理員只看自己分會
         let memQuery = db.from('members').select('*').order('branch').order('name');
         if(isBranchAdmin) memQuery = memQuery.eq('branch', currUser.branch);
@@ -836,6 +858,87 @@
                 <td>${canEdit ? `<button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button>` : '—'}</td>
             </tr>`;
         }).join('');
+    }
+
+    // ── 跨分會媒合申請 ────────────────────────────────
+
+    async function loadMatchRequests() {
+        const isSysAdmin = currUser.role === 'admin';
+        const isBranchAdmin = currUser.role === 'branch_admin';
+
+        // 分會管理員才顯示申請表單
+        document.getElementById('matchRequestForm').style.display = isBranchAdmin ? 'block' : 'none';
+
+        if(isBranchAdmin) {
+            // 排除自己分會，填入可申請的目標分會
+            document.getElementById('matchTargetBranch').innerHTML =
+                allBranches.filter(b => b.name !== currUser.branch)
+                    .map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+        }
+
+        // 系統管理員看全部；分會管理員只看跟自己分會有關的
+        let query = db.from('branch_match_requests').select('*').order('created_at', { ascending: false });
+        if(isBranchAdmin) {
+            query = query.or(`from_branch.eq.${currUser.branch},to_branch.eq.${currUser.branch}`);
+        }
+        const { data: reqs } = await query;
+
+        const statusLabel = s => s === 'approved' ? '<span class="tag tag-green">✅ 已核准</span>'
+            : s === 'rejected' ? '<span class="tag" style="background:#fce4ec;color:#c62828">❌ 已拒絕</span>'
+            : '<span class="tag tag-yellow">⏳ 待審核</span>';
+
+        document.getElementById('match-request-list').innerHTML = (reqs || []).length
+            ? (reqs || []).map(r => `<tr>
+                <td>${r.from_branch}</td>
+                <td>${r.to_branch}</td>
+                <td>${statusLabel(r.status)}</td>
+                <td>
+                    ${isSysAdmin && r.status === 'pending' ? `
+                        <button class="btn-sm" style="background:#4caf50" onclick="reviewMatchRequest('${r.id}','approved')">核准</button>
+                        <button class="btn-sm btn-del" onclick="reviewMatchRequest('${r.id}','rejected')">拒絕</button>
+                    ` : ''}
+                    ${isSysAdmin && r.status !== 'pending' ? `<button class="btn-sm btn-del" onclick="delMatchRequest('${r.id}')">刪除</button>` : ''}
+                    ${isBranchAdmin && r.status === 'pending' ? `<button class="btn-sm btn-del" onclick="delMatchRequest('${r.id}')">撤回</button>` : ''}
+                </td>
+            </tr>`).join('')
+            : '<tr><td colspan="4" style="text-align:center; color:#aaa; padding:15px">尚無申請紀錄</td></tr>';
+    }
+
+    async function submitMatchRequest() {
+        const target = document.getElementById('matchTargetBranch').value;
+        if(!target) return alert("請選擇目標分會");
+        if(!currUser.branch) return alert("您尚未設定分會");
+
+        // 避免重複申請
+        const { data: exist } = await db.from('branch_match_requests')
+            .select('id')
+            .eq('status', 'pending')
+            .or(`and(from_branch.eq.${currUser.branch},to_branch.eq.${target}),and(from_branch.eq.${target},to_branch.eq.${currUser.branch})`);
+        if(exist && exist.length > 0) return alert("已有待審核的申請，請等待管理員處理");
+
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('branch_match_requests').insert({
+            from_branch: currUser.branch,
+            to_branch: target,
+            status: 'pending'
+        });
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("送出失敗：" + error.message);
+        alert(`已送出申請，等待管理員審核`);
+        await loadMatchRequests();
+    }
+
+    async function reviewMatchRequest(id, status) {
+        document.getElementById('loading').style.display = 'block';
+        await db.from('branch_match_requests').update({ status }).eq('id', id);
+        document.getElementById('loading').style.display = 'none';
+        await loadMatchRequests();
+    }
+
+    async function delMatchRequest(id) {
+        if(!confirm("確定刪除此申請？")) return;
+        await db.from('branch_match_requests').delete().eq('id', id);
+        await loadMatchRequests();
     }
 
     async function toggleBranchType(id, currentType) {
