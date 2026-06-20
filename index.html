@@ -223,7 +223,7 @@
             <button class="btn-sm" style="background:#333; padding:10px" onclick="addNewMember()">新增帳號</button>
         </div>
     </div>
-    <div class="admin-panel">
+    <div class="admin-panel" id="branchMgmtPanel">
         <h3>🏢 分會管理</h3>
         <div class="row">
             <input id="newBranchName" placeholder="新分會名稱">
@@ -235,7 +235,7 @@
         <h3>👥 會員名單管理</h3>
         <div style="overflow-x:auto"><table class="std-table"><thead><tr><th>姓名</th><th>分會</th><th>角色</th><th>編輯</th><th>操作</th></tr></thead><tbody id="member-list"></tbody></table></div>
     </div>
-    <div class="admin-panel">
+    <div class="admin-panel" id="industryMgmtPanel">
         <h3>🏷️ 產業管理</h3>
         <div class="row">
             <select id="newAdminCat"></select>
@@ -292,7 +292,7 @@
         currUser = data;
         document.getElementById('identity-overlay').style.display = 'none';
         document.getElementById('displayUser').innerText = `${n} (登出)`;
-        if(data.role === 'admin') document.getElementById('adminTabBtn').style.display = 'block';
+        if(data.role === 'admin' || data.role === 'branch_admin') document.getElementById('adminTabBtn').style.display = 'block';
         init();
     }
 
@@ -778,40 +778,64 @@
 
     async function loadAdminData() {
         await loadBranches();
-        document.getElementById('branch-list').innerHTML = allBranches.map(b => {
-            const isPre = (b.type || 'normal') === 'preparatory';
-            const typeLabel = isPre
-                ? '<span class="tag tag-orange">🔸 籌備會</span>'
-                : '<span class="tag tag-green">🟢 一般分會</span>';
+        const isSysAdmin = currUser.role === 'admin';
+        const isBranchAdmin = currUser.role === 'branch_admin';
+
+        // 分會管理、產業管理只有系統管理員可見
+        document.getElementById('branchMgmtPanel').style.display = isSysAdmin ? 'block' : 'none';
+        document.getElementById('industryMgmtPanel').style.display = isSysAdmin ? 'block' : 'none';
+
+        if(isSysAdmin) {
+            document.getElementById('branch-list').innerHTML = allBranches.map(b => {
+                const isPre = (b.type || 'normal') === 'preparatory';
+                const typeLabel = isPre
+                    ? '<span class="tag tag-orange">🔸 籌備會</span>'
+                    : '<span class="tag tag-green">🟢 一般分會</span>';
+                return `<tr>
+                    <td>${b.name}</td>
+                    <td>${typeLabel}</td>
+                    <td><button class="btn-sm" style="background:${isPre?'#4caf50':'#ff9800'}" onclick="toggleBranchType('${b.id}','${b.type||'normal'}')">${isPre ? '改為一般' : '改為籌備會'}</button></td>
+                    <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
+                </tr>`;
+            }).join('');
+
+            const { data: inds } = await db.from('industries').select('*').order('category').order('name');
+            document.getElementById('admin-industry-list').innerHTML = (inds || []).map(i => `<tr>
+                <td>${i.category}</td><td>${i.name}</td>
+                <td><button class="btn-sm btn-del" onclick="delI('${i.id}','${i.name}')">✕</button></td>
+            </tr>`).join('');
+        }
+
+        // 分會管理員只能看到自己分會的選項
+        if(isBranchAdmin) {
+            document.getElementById('newMemBranch').innerHTML =
+                `<option value="${currUser.branch}">${currUser.branch}</option>`;
+        } else {
+            document.getElementById('newMemBranch').innerHTML =
+                allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+        }
+
+        // 系統管理員看全部；分會管理員只看自己分會
+        let memQuery = db.from('members').select('*').order('branch').order('name');
+        if(isBranchAdmin) memQuery = memQuery.eq('branch', currUser.branch);
+        const { data: mems } = await memQuery;
+
+        const roleLabel = r => r === 'admin' ? '🔴 系統管理員' : r === 'branch_admin' ? '🟠 分會管理員' : '🔵 會員';
+
+        document.getElementById('member-list').innerHTML = (mems || []).map(m => {
+            const canEdit = isSysAdmin || (isBranchAdmin && m.role !== 'admin' && m.role !== 'branch_admin');
             return `<tr>
-                <td>${b.name}</td>
-                <td>${typeLabel}</td>
-                <td><button class="btn-sm" style="background:${isPre?'#4caf50':'#ff9800'}" onclick="toggleBranchType('${b.id}','${b.type||'normal'}')">${isPre ? '改為一般' : '改為籌備會'}</button></td>
-                <td><button class="btn-sm btn-del" onclick="delBranch('${b.id}','${b.name}')">✕</button></td>
+                <td>${m.name}</td>
+                <td><span style="font-size:0.85rem; color:#555">${m.branch || '—'}</span></td>
+                <td>${roleLabel(m.role)}</td>
+                <td>
+                    ${isSysAdmin ? `<button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">角色</button>` : ''}
+                    ${canEdit ? `<button class="btn-sm" style="background:#ff9800" onclick="changePwd('${m.id}','${m.name}')">密碼</button>` : ''}
+                    ${isSysAdmin ? `<button class="btn-sm" style="background:#9c27b0" onclick="changeBranch('${m.id}','${m.name}','${m.branch||''}')">分會</button>` : ''}
+                </td>
+                <td>${canEdit ? `<button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button>` : '—'}</td>
             </tr>`;
         }).join('');
-
-        document.getElementById('newMemBranch').innerHTML =
-            allBranches.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
-
-        const { data: mems } = await db.from('members').select('*').order('branch').order('name');
-        document.getElementById('member-list').innerHTML = (mems || []).map(m => `<tr>
-            <td>${m.name}</td>
-            <td><span style="font-size:0.85rem; color:#555">${m.branch || '—'}</span></td>
-            <td>${m.role === 'admin' ? '🔴 管理員' : '🔵 會員'}</td>
-            <td>
-                <button class="btn-sm btn-edit" onclick="toggleR('${m.id}','${m.role}')">角色</button>
-                <button class="btn-sm" style="background:#ff9800" onclick="changePwd('${m.id}','${m.name}')">密碼</button>
-                <button class="btn-sm" style="background:#9c27b0" onclick="changeBranch('${m.id}','${m.name}','${m.branch||''}')">分會</button>
-            </td>
-            <td><button class="btn-sm btn-del" onclick="delM('${m.id}','${m.name}')">刪除</button></td>
-        </tr>`).join('');
-
-        const { data: inds } = await db.from('industries').select('*').order('category').order('name');
-        document.getElementById('admin-industry-list').innerHTML = (inds || []).map(i => `<tr>
-            <td>${i.category}</td><td>${i.name}</td>
-            <td><button class="btn-sm btn-del" onclick="delI('${i.id}','${i.name}')">✕</button></td>
-        </tr>`).join('');
     }
 
     async function toggleBranchType(id, currentType) {
@@ -885,7 +909,11 @@
         if(confirm(`刪除會員【${name}】？`)) { await db.from('members').delete().eq('id', id); loadAdminData(); }
     }
     async function toggleR(id, r) {
-        await db.from('members').update({ role: r==='admin'?'user':'admin' }).eq('id', id);
+        const roles = ['user', 'branch_admin', 'admin'];
+        const next = roles[(roles.indexOf(r) + 1) % roles.length];
+        const labels = { user: '一般會員', branch_admin: '分會管理員', admin: '系統管理員' };
+        if(!confirm(`將此帳號角色改為【${labels[next]}】？`)) return;
+        await db.from('members').update({ role: next }).eq('id', id);
         loadAdminData();
     }
     async function addAdminIndustry() {
