@@ -701,14 +701,12 @@
 
         let filtered = data || [];
 
-        if(!isAdmin) {
-            filtered = filtered.filter(c => {
-                const realBranch = memberBranchMap[c.member_id] || c.owner_branch || '';
-                if(!approvedBranches.has(realBranch)) return false;
-                if(prepBranches.includes(realBranch) && realBranch !== myBranch) return false;
-                return true;
-            });
-        }
+        filtered = filtered.filter(c => {
+            const realBranch = memberBranchMap[c.member_id] || c.owner_branch || '';
+            if(!approvedBranches.has(realBranch)) return false;
+            if(prepBranches.includes(realBranch) && realBranch !== myBranch) return false;
+            return true;
+        });
 
         if(!filtered.length) {
             res.innerHTML = '<div style="text-align:center; padding:20px; color:#666">暫無符合的人脈匹配。</div>';
