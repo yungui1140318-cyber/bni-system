@@ -336,6 +336,21 @@
 
     function renderBranchPills(branches) {
         const container = document.getElementById('branchFilter');
+        const myBranchType = branchTypeMap[currUser.branch] || 'normal';
+        const isPrep = myBranchType === 'preparatory';
+
+        // 籌備會成員只顯示自己分會的 pill，不顯示全部分會
+        if(isPrep) {
+            container.innerHTML = '';
+            const pill = document.createElement('div');
+            pill.className = 'branch-pill preparatory active';
+            pill.textContent = currUser.branch + ' 🔸';
+            pill.onclick = function() { filterBranch(currUser.branch, this); };
+            container.appendChild(pill);
+            currentBranchFilter = currUser.branch;
+            return;
+        }
+
         container.innerHTML = `<div class="branch-pill active" onclick="filterBranch('', this)">全部分會</div>`;
         branches.forEach(b => {
             const isPre = (b.type || 'normal') === 'preparatory';
@@ -357,12 +372,19 @@
     }
 
     function renderPartnerSelect() {
-        const filtered = currentBranchFilter
-            ? allMembers.filter(m => m.branch === currentBranchFilter)
+        const myBranchType = branchTypeMap[currUser.branch] || 'normal';
+        const isPrep = myBranchType === 'preparatory';
+
+        // 籌備會成員只能看自己分會的夥伴
+        let pool = isPrep
+            ? allMembers.filter(m => m.branch === currUser.branch)
             : allMembers;
+
+        if(currentBranchFilter) pool = pool.filter(m => m.branch === currentBranchFilter);
+
         document.getElementById('partnerSelect').innerHTML =
             '<option value="">-- 請點我選擇夥伴 --</option>' +
-            filtered.map(m => `<option value="${m.id}">${m.name}${m.branch ? ' (' + m.branch + ')' : ''}</option>`).join('');
+            pool.map(m => `<option value="${m.id}">${m.name}${m.branch ? ' (' + m.branch + ')' : ''}</option>`).join('');
     }
 
     // ── 產業 ──────────────────────────────────────────
