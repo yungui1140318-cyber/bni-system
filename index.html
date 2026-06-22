@@ -572,14 +572,22 @@
         const { data: gr } = await db.from('user_grids').select('member_id, grid_index, content');
         const { data: ms } = await db.from('members').select('id, name, branch').order('branch').order('name');
         allMembers = ms || [];
-        const memberMap = {};
-        allMembers.forEach(m => { memberMap[m.id] = m.name; });
+        const memberMap = {}, memberBranchMap = {};
+        allMembers.forEach(m => {
+            memberMap[m.id] = m.name;
+            memberBranchMap[m.id] = m.branch || '';
+        });
+
+        // 只統計同分會成員的資料
+        const myBranch = currUser.branch || '';
+        const sameBranchIds = new Set(allMembers.filter(m => m.branch === myBranch).map(m => m.id));
 
         const countMap = {}, nameMap = {};
         (gr || []).forEach(r => {
             if(!r.content) return;
             if(!r.grid_index.startsWith('g4-')) return;
             if(r.grid_index === 'g4-c4') return;
+            if(!sameBranchIds.has(r.member_id)) return;
             countMap[r.content] = (countMap[r.content] || 0) + 1;
             if(!nameMap[r.content]) nameMap[r.content] = [];
             const name = memberMap[r.member_id] || '未知';
