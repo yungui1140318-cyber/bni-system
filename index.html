@@ -182,6 +182,7 @@
 
 <div id="matches-view" class="container">
     <div id="match-results"></div>
+    <div id="match-potential" style="margin-top:20px;"></div>
 </div>
 
 <div id="crm-view" class="container">
@@ -760,6 +761,58 @@
                 </div>
             </div>`;
         }).join('');
+
+        // ── 潛力分會提示 ──────────────────────────────
+        const potentialArea = document.getElementById('match-potential');
+        const allContacts = data || [];
+
+        // 計算未聯動的一般分會中，各有幾筆可媒合人脈
+        const potentialMap = {};
+        allContacts.forEach(c => {
+            const realBranch = memberBranchMap[c.member_id] || c.owner_branch || '';
+            if(!realBranch || approvedBranches.has(realBranch)) return;
+            if(prepBranches.includes(realBranch)) return;
+            if(realBranch === myBranch) return;
+            potentialMap[realBranch] = (potentialMap[realBranch] || 0) + 1;
+        });
+
+        const potentials = Object.entries(potentialMap).sort((a, b) => b[1] - a[1]);
+
+        if(potentials.length > 0) {
+            const isBranchAdmin = currUser.role === 'branch_admin';
+            const hint = isBranchAdmin
+                ? '點選「申請聯動」，送出後由系統管理員審核'
+                : '可請貴分會管理員向系統管理員申請聯動';
+            potentialArea.innerHTML = `
+                <div class="ranking-panel" style="border-top-color:#2196f3; margin-top:10px;">
+                    <h3 style="margin:0 0 4px 0; color:#1565c0">🔓 聯動後可解鎖的人脈</h3>
+                    <p style="margin:0 0 12px 0; font-size:0.82rem; color:#999">${hint}</p>
+                    ${potentials.map(([branch, count]) => `
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f5f5f5;">
+                            <div style="flex:1; font-weight:bold;">${branch}</div>
+                            <div style="color:#1565c0; font-weight:bold; font-size:1.05rem;">+${count} 筆人脈</div>
+                            ${isBranchAdmin ? `<button class="btn-sm" style="background:#2196f3" onclick="quickApplyMatch('${branch}')">申請聯動</button>` : ''}
+                        </div>`).join('')}
+                </div>`;
+        } else {
+            potentialArea.innerHTML = '';
+        }
+    }
+
+    async function quickApplyMatch(targetBranch) {
+        if(!currUser.branch) return alert("您尚未設定分會");
+        const { data: exist } = await db.from('branch_match_requests')
+            .select('id').eq('status', 'pending')
+            .or(`and(from_branch.eq.${currUser.branch},to_branch.eq.${targetBranch}),and(from_branch.eq.${targetBranch},to_branch.eq.${currUser.branch})`);
+        if(exist && exist.length > 0) return alert("已有待審核的申請，請等待管理員處理");
+        if(!confirm(`確定向管理員申請與【${targetBranch}】開啟聯動媒合？`)) return;
+        document.getElementById('loading').style.display = 'block';
+        const { error } = await db.from('branch_match_requests').insert({
+            from_branch: currUser.branch, to_branch: targetBranch, status: 'pending'
+        });
+        document.getElementById('loading').style.display = 'none';
+        if(error) return alert("送出失敗：" + error.message);
+        alert(`已送出申請！`);
     }
 
     // ── CRM ───────────────────────────────────────────
